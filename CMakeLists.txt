@@ -42,6 +42,7 @@ add_library(soem
 
 target_link_libraries(soem pthread rt)
 
+
 add_executable(simple_test test/simple_test.c)
 add_executable(red_test test/red_test.c)
 add_executable(firm_update test/firm_update.c)
@@ -58,4 +59,11 @@ target_link_libraries(ebox soem)
 target_link_libraries(aliastool soem)
 target_link_libraries(slaveinfo soem)
 
+
+add_library(ecat_iface
+  ecat_iface/ec_master_iface.cpp
+  #ecat_iface/ec_slave.cpp
+)	
+
+target_link_libraries(ecat_iface soem)
 

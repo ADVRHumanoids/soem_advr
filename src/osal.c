@@ -44,7 +44,6 @@ int osal_gettimeofday(struct timeval *tv, struct timezone *tz)
     * If this function preempts timeadjust and it uses vpage it live-locks.
     * Also when using XENOMAI, only clock_gettime is RT safe */
    return_value = clock_gettime (CLOCK_MONOTONIC, &ts);
-   //return_value = clock_gettime (CLOCK_REALTIME, &ts);
    tv->tv_sec = ts.tv_sec;
    tv->tv_usec = ts.tv_nsec / 1000;
    return return_value;
