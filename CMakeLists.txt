@@ -65,5 +65,10 @@ add_library(ecat_iface
   #ecat_iface/ec_slave.cpp
 )	
 
+
 target_link_libraries(ecat_iface soem)
+
+add_executable(xeno_test ecat_iface/xeno_test.cpp)
+
+target_link_libraries(xeno_test ecat_iface)
 
