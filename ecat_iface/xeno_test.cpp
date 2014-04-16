@@ -8,61 +8,14 @@
 #endif
 
 #include "ec_master_iface.h"
+#include "ec_slave_type.h"
 
 
-#define CONTROLLER_LOOP_PERIOD_NS 1000000
-#define CONTROLLER_LOOP_OFFSET_NS  400000
-
-int loop = 1;
-
-/**********************************************************
- *  slave ecat memory map
- *  
- */
-typedef struct {
-    uint16_t    _type;
-    int32_t     _value;
-    uint64_t    _ts;
-} __attribute__((__packed__)) rx_pdo_t;
-
-typedef union {
-    rx_pdo_t    rx_pdo; 
-    uint8_t     buffer[sizeof(rx_pdo_t)];
-} rx_sm_t; 
-
-typedef struct tx_pdo {
-    uint8_t     _bit_0:1;
-    uint8_t     _bit_1:1;
-    uint8_t     _bit_2:1;
-    uint8_t     _bit_3:1;
-    uint8_t     _bit_4:1;
-    uint8_t     _bit_5:1;
-    uint8_t     _bit_6:1;
-    uint8_t     _bit_7:1;
-    uint8_t     _bits;
-    int8_t      _sint;
-    uint8_t     _usint;
-    int16_t     _int;
-    uint16_t    _uint;
-    int32_t     _dint;
-    uint32_t    _udint;
-    int64_t     _lint;
-    uint64_t    _ulint;
-    float       _real;
-} __attribute__((__packed__)) tx_pdo_t;
-
-typedef union {
-    tx_pdo_t    tx_pdo;
-    uint8_t     buffer[sizeof(tx_pdo_t)];
-} tx_sm_t; 
-/*
- * 
- *************************************************************/
-
-rx_sm_t slave_rx;
-tx_sm_t slave_tx;
+#define CONTROLLER_LOOP_PERIOD_NS     1000000
+#define CONTROLLER_LOOP_OFFSET_NS   500000000
 
 
+static int loop = 1;
 
 static void warn_upon_switch(int sig __attribute__((unused)))
 {
@@ -74,16 +27,14 @@ static void warn_upon_switch(int sig __attribute__((unused)))
        secondary mode: */
     nentries = backtrace(bt,sizeof(bt)/sizeof(bt[0]));
     // dump backtrace 
-    //backtrace_symbols_fd(bt,nentries,fileno(stdout));
+    backtrace_symbols_fd(bt,nentries,fileno(stdout));
 }
-
 
 static void shutdown(int sig __attribute__((unused)))
 {
     loop = 0;
-    printf("got signal .... Shutdown\n");
+    DPRINTF("got signal .... Shutdown\n");
 }
-
 
 static void set_signal_handler(void)
 {
@@ -97,17 +48,28 @@ static void set_signal_handler(void)
 #endif
 }
 
+///////////////////////////////////////////////////////////////////////////////
 
 
+input_slave_t   slave_input[4];
+output_slave_t  slave_output[4];
+ec_timing_t     timing;
 
 int main(int argc, char **argv)
 {
+    int ret;
 
     set_signal_handler();
 
 #ifdef __XENO__
+    
+    int policy = SCHED_FIFO;
+    struct sched_param  schedparam;
+    schedparam.sched_priority = sched_get_priority_max(policy);
+    pthread_setschedparam(pthread_self(), SCHED_FIFO, &schedparam);
+
     /* Prevent any memory-swapping for this program */
-    int ret = mlockall(MCL_CURRENT | MCL_FUTURE);
+    ret = mlockall(MCL_CURRENT | MCL_FUTURE);
     if ( ret < 0 ) {
         printf("mlockall failed (ret=%d) %s\n", ret, strerror(ret));
         return 0;
@@ -121,26 +83,63 @@ int main(int argc, char **argv)
     rt_print_auto_init(1);
 #endif
 
-    int expected_wc = initialize("eth1", CONTROLLER_LOOP_PERIOD_NS, CONTROLLER_LOOP_OFFSET_NS);
+    int expected_wkc;
 
-    if ( ! expected_wc ) {
+    if ( argc > 1 ) {
+        expected_wkc = initialize(argv[1], CONTROLLER_LOOP_PERIOD_NS, CONTROLLER_LOOP_OFFSET_NS);
+    } else {
+        printf("Usage: %s ifname\nifname = {eth0,rteth0} for example\n", argv[0]);
+        return 0;
+    }
+
+    if ( expected_wkc < 0) {
         finalize();
         return 0;
     }
 
+    struct timespec sleep_time = { 0, 0 };
+    uint64_t        t_prec, t_now, dt;
+    int rtt = 0;
+    int wkc;
+    int retry;
+
     while ( loop ) {
 
-        slave_rx.rx_pdo._ts = get_time_ns();
+        t_now = get_time_ns();
+        dt = t_now - t_prec;
+        t_prec = t_now;  
+        DPRINTF("== loop %d\n", dt); 
 
-        int ret = send_to_slaves(slave_rx.buffer, sizeof(slave_rx));
+        // wait for cond_signal
+        ret = recv_from_slaves(slave_output, &timing);
         if ( ret < 0 ) {
-            printf("wkc %d\n", -ret);
+            DPRINTF("fail recv_from_slaves");
         }
 
-        print_ecat_IOmap();
+        //DPRINTF("@@ %d %u\n", slave_output[0].test._sint , slave_output[0].test._usint);
+        rtt = (int)(get_time_ns() - slave_output[0].test._ulint);
+        DPRINTF("@@ rtt %d\n", rtt); 
 
-        timespec delay = { 0, 1000000};
-        clock_nanosleep(CLOCK_MONOTONIC, 0, &delay, NULL);
+        DPRINTF(">> %lld %lld %llu\n", timing.recv_dc_time % CONTROLLER_LOOP_PERIOD_NS , timing.offset, timing.loop_time); 
+
+        sleep_time.tv_nsec = CONTROLLER_LOOP_PERIOD_NS - (timing.recv_dc_time % CONTROLLER_LOOP_PERIOD_NS) - 150000;
+        DPRINTF("++ sleep %ld\n", sleep_time.tv_nsec);
+
+        clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
+        slave_input[0].test._ts = get_time_ns();
+        wkc = send_to_slaves(slave_input);
+
+        retry = 2;
+        while ( wkc < expected_wkc && retry--) {
+            DPRINTF("## wkc %d\n", wkc);
+            wkc = send_to_slaves(slave_input);
+        }
+
+        if ( ! retry) {
+            finalize();
+            break;
+        }
+
 
     }
 

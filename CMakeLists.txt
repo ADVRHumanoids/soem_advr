@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(soem)
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 #find_path(RTNET_INCLUDE_DIR NAMES rtnet.h HINTS /usr/local/rtnet/include )
 find_path(RTNET_INCLUDE_DIR NAMES rtnet.h PATH_SUFFIXES rtnet/include)
@@ -14,6 +15,7 @@ if(ENABLE_RTNET AND RTNET_INCLUDE_DIR)
   execute_process(COMMAND xeno-config --skin=posix --cflags OUTPUT_VARIABLE XENO_CFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
   execute_process(COMMAND xeno-config --skin=posix --ldflags OUTPUT_VARIABLE XENO_LDFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${XENO_CFLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${XENO_CFLAGS}")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${XENO_LDFLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${XENO_LDFLAGS} -lnative")
 endif()
@@ -62,7 +64,7 @@ target_link_libraries(slaveinfo soem)
 
 add_library(ecat_iface
   ecat_iface/ec_master_iface.cpp
-  #ecat_iface/ec_slave.cpp
+  ecat_iface/ec_slave.cpp
 )	
 
 

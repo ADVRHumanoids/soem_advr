@@ -18,10 +18,24 @@ extern "C" {
 #endif
 
 #include "utils.h"
+#include "ec_slave_type.h"
 
 
 #define EC_TIMEOUT_US      500
 
+typedef struct {
+
+    int64_t     recv_dc_time;
+    int64_t     offset;
+    uint64_t    loop_time;
+
+} ec_timing_t;
+
+/**
+ * 
+ * @param cycle_time_ns 
+ */
+void start_ecat_thread(uint64_t cycle_time_ns);
 
 /**
  * 
@@ -38,16 +52,10 @@ int initialize(const char * ifname, uint64_t ecat_cycle_ns, uint64_t ecat_cycle_
  */
 void finalize(void);
 
-/**
- * 
- * @return int 
- */
-int ecat_cycle(void);
 
-int recv_from_slaves(uint8_t * , int);
+int recv_from_slaves(output_slave_t *, ec_timing_t *);
  
-int send_to_slaves(uint8_t * , int);
+int send_to_slaves(input_slave_t *);
 
-void print_ecat_IOmap(void);
 
 #endif
