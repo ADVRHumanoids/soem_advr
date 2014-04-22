@@ -11,11 +11,8 @@
 #include "ec_slave_type.h"
 
 
-#define CONTROLLER_LOOP_PERIOD_NS     1000000
-#define CONTROLLER_LOOP_OFFSET_NS   500000000
 
-
-static int loop = 1;
+static int run_loop = 1;
 
 static void warn_upon_switch(int sig __attribute__((unused)))
 {
@@ -32,7 +29,7 @@ static void warn_upon_switch(int sig __attribute__((unused)))
 
 static void shutdown(int sig __attribute__((unused)))
 {
-    loop = 0;
+    run_loop = 0;
     DPRINTF("got signal .... Shutdown\n");
 }
 
@@ -50,6 +47,7 @@ static void set_signal_handler(void)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+using namespace ec_master_iface;
 
 input_slave_t   slave_input[4];
 output_slave_t  slave_output[4];
@@ -83,10 +81,12 @@ int main(int argc, char **argv)
     rt_print_auto_init(1);
 #endif
 
-    int expected_wkc;
+    int         expected_wkc;
+    uint64_t    sync_cycle_time_ns = 1e6;       //   1ms
+    uint64_t    sync_cycle_offset_ns = 500e6;   // 500ms
 
     if ( argc > 1 ) {
-        expected_wkc = initialize(argv[1], CONTROLLER_LOOP_PERIOD_NS, CONTROLLER_LOOP_OFFSET_NS);
+        expected_wkc = initialize(argv[1], &sync_cycle_time_ns, &sync_cycle_offset_ns);
     } else {
         printf("Usage: %s ifname\nifname = {eth0,rteth0} for example\n", argv[0]);
         return 0;
@@ -97,35 +97,50 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    struct timespec sleep_time = { 0, 0 };
-    uint64_t        t_prec, t_now, dt;
-    int rtt = 0;
+    struct timespec sleep_time = { 0, 400000 };
+    uint64_t        t_prec = 0, t_now, dt;
+    uint64_t        rtt = 0;
     int wkc;
     int retry;
 
-    while ( loop ) {
+    stat_t s_loop, s_rtt, s_sleep;
+
+    // warm up ... just for stat_t accumulators
+    ret = recv_from_slaves(slave_output, &timing);
+    if ( ret < 0 ) { DPRINTF("fail recv_from_slaves"); }
+    t_prec = get_time_ns();
+    sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 150000;
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
+    slave_input[0].test._ts = get_time_ns();
+    wkc = send_to_slaves(slave_input);
+
+
+    while ( run_loop ) {
+
+        // wait for cond_signal 
+        // ecat_thread sync with DC
+        ret = recv_from_slaves(slave_output, &timing);
+        if ( ret < 0 ) { DPRINTF("fail recv_from_slaves"); }
 
         t_now = get_time_ns();
         dt = t_now - t_prec;
         t_prec = t_now;  
-        DPRINTF("== loop %d\n", dt); 
-
-        // wait for cond_signal
-        ret = recv_from_slaves(slave_output, &timing);
-        if ( ret < 0 ) {
-            DPRINTF("fail recv_from_slaves");
-        }
-
+        s_loop(dt);
+        //DPRINTF("== loop %d\n", dt); 
+        
         //DPRINTF("@@ %d %u\n", slave_output[0].test._sint , slave_output[0].test._usint);
-        rtt = (int)(get_time_ns() - slave_output[0].test._ulint);
-        DPRINTF("@@ rtt %d\n", rtt); 
+        rtt = get_time_ns() - slave_output[0].test._ulint;
+        s_rtt(rtt);
+        //DPRINTF("@@ rtt %llu\n", rtt); 
+        //DPRINTF(">> %lld %lld %llu\n", timing.recv_dc_time % sync_cycle_time_ns , timing.offset, timing.loop_time); 
 
-        DPRINTF(">> %lld %lld %llu\n", timing.recv_dc_time % CONTROLLER_LOOP_PERIOD_NS , timing.offset, timing.loop_time); 
 
-        sleep_time.tv_nsec = CONTROLLER_LOOP_PERIOD_NS - (timing.recv_dc_time % CONTROLLER_LOOP_PERIOD_NS) - 150000;
-        DPRINTF("++ sleep %ld\n", sleep_time.tv_nsec);
 
+        sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 150000;
+        //DPRINTF("++ sleep %ld\n", sleep_time.tv_nsec);
+        s_sleep(sleep_time.tv_nsec);
         clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
+
         slave_input[0].test._ts = get_time_ns();
         wkc = send_to_slaves(slave_input);
 
@@ -144,6 +159,13 @@ int main(int argc, char **argv)
     }
 
     finalize();
+
+    DPRINTF("loop\n");
+    print_stat(s_loop);
+    DPRINTF("rtt\n");
+    print_stat(s_rtt);
+    DPRINTF("sleep\n");
+    print_stat(s_sleep);
 
     return 0;
 }

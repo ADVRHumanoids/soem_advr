@@ -11,6 +11,49 @@
     #define DPRINTF printf
 #endif
 
+#include <sstream>
+#include <boost/format.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/count.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/min.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
+#include <boost/accumulators/statistics/error_of.hpp>
+#include <boost/accumulators/statistics/error_of_mean.hpp>
+
+using namespace boost::accumulators;
+
+typedef accumulator_set<uint64_t, 
+        features<
+             tag::count
+            ,tag::mean
+            ,tag::min
+            ,tag::max
+            ,tag::variance(lazy)
+            ,tag::error_of<tag::mean>
+        >
+    > stat_t;
+
+inline void print_stat(stat_t &s) {
+
+    std::ostringstream oss; 
+
+    if (count(s) > 0) {
+        oss << "\tCount " << count(s) << std::endl;
+        oss << "\tMean " << (uint64_t)mean(s);
+        oss << "\tMin " << min(s);
+        oss << "\tMax " << max(s);
+        oss << "\tVar " << variance(s);
+        oss << "\tErrOfMean " << error_of<tag::mean>(s);
+        oss << std::endl;
+    } else {
+        oss << "No data ..." << std::endl;
+    }
+    DPRINTF("%s", oss.str().c_str());
+}
+
 #define NSEC_PER_SEC	1000000000ULL
 
 inline uint64_t get_time_ns(clockid_t clock_id=CLOCK_MONOTONIC)

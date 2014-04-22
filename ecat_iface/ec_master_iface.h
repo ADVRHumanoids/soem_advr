@@ -20,22 +20,18 @@ extern "C" {
 #include "utils.h"
 #include "ec_slave_type.h"
 
-
 #define EC_TIMEOUT_US      500
 
-typedef struct {
+namespace ec_master_iface {
 
-    int64_t     recv_dc_time;
-    int64_t     offset;
-    uint64_t    loop_time;
+    typedef struct {
 
-} ec_timing_t;
+        int64_t     recv_dc_time;
+        int64_t     offset;
+        uint64_t    loop_time;
 
-/**
- * 
- * @param cycle_time_ns 
- */
-void start_ecat_thread(uint64_t cycle_time_ns);
+    } ec_timing_t;
+
 
 /**
  * 
@@ -45,17 +41,20 @@ void start_ecat_thread(uint64_t cycle_time_ns);
  * 
  * @return int expectedWKC
  */
-int initialize(const char * ifname, uint64_t ecat_cycle_ns, uint64_t ecat_cycle_shift_ns);
+    int initialize(const char* ifname,
+                   const uint64_t* ecat_cycle_ns,
+                   const uint64_t* ecat_cycle_shift_ns);
 
 /**
  * 
  */
-void finalize(void);
+    void finalize(void);
 
 
-int recv_from_slaves(output_slave_t *, ec_timing_t *);
- 
-int send_to_slaves(input_slave_t *);
+    int recv_from_slaves(output_slave_t*, ec_timing_t *);
 
+    int send_to_slaves(input_slave_t*);
+
+}
 
 #endif
