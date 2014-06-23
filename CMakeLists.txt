@@ -27,6 +27,7 @@ endif()
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(${soem_SOURCE_DIR}/include)
+include_directories(./include)
 
 add_library(soem	
   src/osal.c

@@ -7,8 +7,8 @@
     #include <rtdk.h>
 #endif
 
-#include "ec_master_iface.h"
-#include "ec_slave_type.h"
+#include <iit/io/ecat/ec_master_iface.h>
+#include <iit/io/ecat/ec_slave_type.h>
 
 
 
@@ -47,7 +47,7 @@ static void set_signal_handler(void)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-using namespace ec_master_iface;
+using namespace iit::io::ecat;
 
 input_slave_t   slave_input[4];
 output_slave_t  slave_output[4];

@@ -25,7 +25,7 @@
 
 using namespace boost::accumulators;
 
-typedef accumulator_set<uint64_t, 
+typedef accumulator_set<uint64_t,
         features<
              tag::count
             ,tag::mean
@@ -38,7 +38,7 @@ typedef accumulator_set<uint64_t,
 
 inline void print_stat(stat_t &s) {
 
-    std::ostringstream oss; 
+    std::ostringstream oss;
 
     if (count(s) > 0) {
         oss << "\tCount " << count(s) << std::endl;
@@ -80,7 +80,7 @@ inline void add_timespec(struct timespec *ts, int64 addtime)
         ts->tv_sec += (ts->tv_nsec - nsec) / NSEC_PER_SEC;
         ts->tv_nsec = nsec;
     }
-}   
+}
 
 
 #endif

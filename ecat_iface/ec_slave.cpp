@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "ec_slave.h"
+#include <iit/io/ecat/ec_slave.h>
 
 //
 esc_map_t esc;

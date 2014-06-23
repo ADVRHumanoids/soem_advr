@@ -5,7 +5,7 @@
 
    Developer:
        Alessio Margan (2013-, alessio.margan@iit.it)
-   
+
 */
 
 /**
@@ -56,7 +56,7 @@ void slave_factory(ec_slavet slaves[], int slavecount);
 
 
 /**
- * 
+ *
  */
 class Esc {
 
@@ -72,7 +72,7 @@ public:
     uint32_t product_code;
 
 
-    uint8_t   * inputs, * outputs;    
+    uint8_t   * inputs, * outputs;
     uint32_t  nbytes_input, nbytes_output;
 
     // slave input is master output
@@ -89,7 +89,7 @@ public:
 };
 
 /**
- * 
+ *
  */
 class Esc_test : public Esc {
 
@@ -100,7 +100,7 @@ public:
 };
 
 /**
- * 
+ *
  */
 class Esc_HyQ_IO : public Esc {
 
@@ -111,7 +111,7 @@ public:
 };
 
 /**
- * 
+ *
  */
 class Esc_HyQ_Valve : public Esc {
 

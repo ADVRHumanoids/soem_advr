@@ -19,11 +19,8 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "ec_master_iface.h"
-#include "ec_slave.h"
-
-namespace ec_master_iface {
-
+#include <iit/io/ecat/ec_master_iface.h>
+#include <iit/io/ecat/ec_slave.h>
 /**
  * 
  */
@@ -37,7 +34,7 @@ namespace ec_master_iface {
     static pthread_mutex_t  ecat_mux_sync = PTHREAD_MUTEX_INITIALIZER;
     static pthread_cond_t   ecat_cond;
 
-    static ec_timing_t ec_timing;
+    static iit::io::ecat::ec_timing_t ec_timing;
 
 
     static int ecat_cycle(void) {
@@ -71,7 +68,7 @@ namespace ec_master_iface {
         }
         *offsettime = -(delta / 100) - (integral / 20);
 
-    }   
+    }
 
 /* RT EtherCAT thread */
     void * ecat_thread( void* cycle_ns )
@@ -101,7 +98,7 @@ namespace ec_master_iface {
         cycle_time_ns = *((uint64_t*)(cycle_ns)); /* cycletime in ns */
         //DPRINTF("%llu \n", cycle_time_ns);
         toff = 0;
-        ec_send_processdata();    
+        ec_send_processdata();
 
         while ( ecat_thread_run ) {
             /* calculate next cycle start */
@@ -137,7 +134,7 @@ namespace ec_master_iface {
             ec_timing.offset = toff;
             ec_timing.loop_time = t_delta;
 
-        }    
+        }
     }
 
 
@@ -183,7 +180,7 @@ namespace ec_master_iface {
  * 
  * @return int expectedWKC
  */
-    int initialize(const char* ifname, const uint64_t* ecat_cycle_ns, const uint64_t* ecat_cycle_shift_ns) {
+    int iit::io::ecat::initialize(const char* ifname, const uint64_t* ecat_cycle_ns, const uint64_t* ecat_cycle_shift_ns) {
 
 
         DPRINTF("[ECat_master] Using %s\n", ifname);
@@ -264,7 +261,7 @@ namespace ec_master_iface {
 
 
 
-    void finalize(void) {
+    void iit::io::ecat::finalize(void) {
 
         DPRINTF("[ECat_master] Stop ecat_thread\n");
         ecat_thread_run = 0;
@@ -286,7 +283,7 @@ namespace ec_master_iface {
     }
 
 
-    int recv_from_slaves(output_slave_t* slave_outputs, ec_timing_t* timing) {
+    int iit::io::ecat::recv_from_slaves(output_slave_t* slave_outputs, ec_timing_t* timing) {
 
         int ret;
         // Xenomai pthread_cond_timedwait()
@@ -306,7 +303,7 @@ namespace ec_master_iface {
         if ( ! ret ) {
             for ( auto it = esc.begin(); it != esc.end(); it++ ) {
                 switch ( it->second->product_code ) {
-                    
+
                     case IIT_Advr_test_v0_3 :
                         it->second->get_slave_outputs(slave_outputs[it->second->position-1].test);
                         break;
@@ -326,13 +323,13 @@ namespace ec_master_iface {
         return ret;
     }
 
-    int send_to_slaves(input_slave_t* slave_inputs) {
+    int iit::io::ecat::send_to_slaves(input_slave_t* slave_inputs) {
 
         int wkc;
 
         for ( auto it = esc.begin(); it != esc.end(); it++ ) {
             switch ( it->second->product_code ) {
-                
+
                 case IIT_Advr_test_v0_3 :
                     it->second->set_slave_inputs(slave_inputs[it->second->position-1].test);
                     break;
@@ -356,5 +353,4 @@ namespace ec_master_iface {
 
     }
 
-}
 
