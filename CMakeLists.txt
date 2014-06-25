@@ -64,6 +64,7 @@ target_link_libraries(slaveinfo soem)
 
 
 add_library(ecat_iface
+  ecat_iface/slave_wrapper.cpp
   ecat_iface/ec_master_iface.cpp
   ecat_iface/ec_slave.cpp
 )	

@@ -9,6 +9,8 @@
 
 #include <iit/io/ecat/ec_master_iface.h>
 #include <iit/io/ecat/ec_slave_type.h>
+#include <iit/io/ecat/ec_slave.h>
+#include <iit/io/ecat/slave_wrapper.h>
 
 
 
@@ -114,6 +116,9 @@ int main(int argc, char **argv)
     slave_input[0].test._ts = get_time_ns();
     wkc = send_to_slaves(slave_input);
 
+    EscHyQ* hyqEsc;
+    EscPtr hyqEscPtr = esc[1];
+    hyqEsc = dynamic_cast<EscHyQ*>(&(*hyqEscPtr));
 
     while ( run_loop ) {
 
@@ -129,6 +134,8 @@ int main(int argc, char **argv)
         //DPRINTF("== loop %d\n", dt); 
         
         //DPRINTF("@@ %d %u\n", slave_output[0].test._sint , slave_output[0].test._usint);
+        //DPRINTF("@@ %d\n", slave_output[0].hyq_io._rel_enc[0]);
+        DPRINTF("@@ %d\n", hyqEsc->getPDO()._rel_enc[0]);
         rtt = get_time_ns() - slave_output[0].test._ulint;
         s_rtt(rtt);
         //DPRINTF("@@ rtt %llu\n", rtt); 

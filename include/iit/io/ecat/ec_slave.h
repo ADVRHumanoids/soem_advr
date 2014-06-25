@@ -38,6 +38,7 @@ extern "C" {
 #include <boost/shared_ptr.hpp>
 
 #include "utils.h"
+#include "slave_wrapper.h"
 
 #define IIT_VENDOR_ID       0x00000298
 
@@ -45,7 +46,8 @@ extern "C" {
 #define IIT_Advr_HyQ_IO     0x00000004
 #define IIT_Advr_HyQ_Valve  0x00000005
 
-class Esc;
+typedef iit::io::ecat::EscWrapper Esc;
+
 typedef boost::shared_ptr<Esc>  EscPtr;
 typedef std::map<int, EscPtr>   esc_map_t;
 
@@ -55,9 +57,7 @@ void slave_factory(ec_slavet slaves[], int slavecount);
 
 
 
-/**
- *
- */
+/*
 class Esc {
 
 public:
@@ -88,9 +88,7 @@ public:
     }
 };
 
-/**
- *
- */
+
 class Esc_test : public Esc {
 
 public:
@@ -99,9 +97,7 @@ public:
 
 };
 
-/**
- *
- */
+
 class Esc_HyQ_IO : public Esc {
 
 public:
@@ -110,9 +106,7 @@ public:
 
 };
 
-/**
- *
- */
+
 class Esc_HyQ_Valve : public Esc {
 
 public:
@@ -120,6 +114,6 @@ public:
     virtual ~Esc_HyQ_Valve() {}
 
 };
-
+*/
 
 #endif

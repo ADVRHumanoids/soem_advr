@@ -28,13 +28,13 @@ namespace io {
 namespace ecat {
 
 
-typedef struct {
+struct ec_timing_t {
 
     int64_t     recv_dc_time;
     int64_t     offset;
     uint64_t    loop_time;
 
-} ec_timing_t;
+};
 
 
 /**

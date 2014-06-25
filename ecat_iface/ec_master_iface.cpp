@@ -302,7 +302,8 @@
         //ret 0 on success,
         if ( ! ret ) {
             for ( auto it = esc.begin(); it != esc.end(); it++ ) {
-                switch ( it->second->product_code ) {
+                it->second->readPDO();
+/*                switch ( it->second->product_code ) {
 
                     case IIT_Advr_test_v0_3 :
                         it->second->get_slave_outputs(slave_outputs[it->second->position-1].test);
@@ -315,7 +316,7 @@
                     case IIT_Advr_HyQ_Valve:
                         it->second->get_slave_outputs(slave_outputs[it->second->position-1].hyq_valve);
                         break;
-                }
+                }*/
             }
         }
 
@@ -326,7 +327,7 @@
     int iit::io::ecat::send_to_slaves(input_slave_t* slave_inputs) {
 
         int wkc;
-
+/*
         for ( auto it = esc.begin(); it != esc.end(); it++ ) {
             switch ( it->second->product_code ) {
 
@@ -343,7 +344,7 @@
                     break;
             }
         }
-
+*/
         pthread_mutex_lock(&ecat_mutex);
         //ec_send_processdata();
         wkc = ecat_cycle();
