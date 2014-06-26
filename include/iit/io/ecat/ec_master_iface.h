@@ -2,6 +2,8 @@
 #define __ECAT_MASTER_IFACE_H__
 
 #include <stdint.h>
+#include <memory> // shared_ptr
+#include <map>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,6 +21,7 @@ extern "C" {
 
 #include "utils.h"
 #include "ec_slave_type.h"
+#include "slave_wrapper.h"
 
 
 #define EC_TIMEOUT_US      500
@@ -36,6 +39,9 @@ struct ec_timing_t {
 
 };
 
+typedef std::shared_ptr<EscWrapper>  ESCPtr;
+typedef std::map<int, ESCPtr>  SlavesMap;
+
 
 /**
  *
@@ -45,7 +51,8 @@ struct ec_timing_t {
  *
  * @return int expectedWKC
  */
-int initialize(const char* ifname,
+int initialize(
+        const char* ifname,
         const uint64_t* ecat_cycle_ns,
         const uint64_t* ecat_cycle_shift_ns);
 
@@ -54,8 +61,9 @@ int initialize(const char* ifname,
  */
 void finalize(void);
 
+int setExpectedSlaves(const SlavesMap& expectedSlaves);
 
-int recv_from_slaves(output_slave_t*, ec_timing_t *);
+int recv_from_slaves(ec_timing_t *);
 
 int send_to_slaves(input_slave_t*);
 

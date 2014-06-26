@@ -9,7 +9,7 @@
 
 #include <iit/io/ecat/ec_master_iface.h>
 #include <iit/io/ecat/ec_slave_type.h>
-#include <iit/io/ecat/ec_slave.h>
+
 #include <iit/io/ecat/slave_wrapper.h>
 
 
@@ -87,12 +87,21 @@ int main(int argc, char **argv)
     uint64_t    sync_cycle_time_ns = 1e6;       //   1ms
     uint64_t    sync_cycle_offset_ns = 500e6;   // 500ms
 
+
+
     if ( argc > 1 ) {
         expected_wkc = initialize(argv[1], &sync_cycle_time_ns, &sync_cycle_offset_ns);
     } else {
         printf("Usage: %s ifname\nifname = {eth0,rteth0} for example\n", argv[0]);
         return 0;
     }
+
+
+    SlavesMap slaves;
+    EscHyQ* slavePtr = new EscHyQ(ec_slave[1]);
+    slaves[1] = ESCPtr(slavePtr);
+
+    setExpectedSlaves(slaves);
 
     if ( expected_wkc < 0) {
         finalize();
@@ -108,7 +117,7 @@ int main(int argc, char **argv)
     stat_t s_loop, s_rtt, s_sleep;
 
     // warm up ... just for stat_t accumulators
-    ret = recv_from_slaves(slave_output, &timing);
+    ret = recv_from_slaves( &timing);
     if ( ret < 0 ) { DPRINTF("fail recv_from_slaves"); }
     t_prec = get_time_ns();
     sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 150000;
@@ -116,15 +125,15 @@ int main(int argc, char **argv)
     slave_input[0].test._ts = get_time_ns();
     wkc = send_to_slaves(slave_input);
 
-    EscHyQ* hyqEsc;
-    EscPtr hyqEscPtr = esc[1];
-    hyqEsc = dynamic_cast<EscHyQ*>(&(*hyqEscPtr));
+    //EscHyQ* hyqEsc;
+    //EscPtr hyqEscPtr = esc[1];
+    //hyqEsc = dynamic_cast<EscHyQ*>(&(*hyqEscPtr));
 
     while ( run_loop ) {
 
         // wait for cond_signal 
         // ecat_thread sync with DC
-        ret = recv_from_slaves(slave_output, &timing);
+        ret = recv_from_slaves( &timing);
         if ( ret < 0 ) { DPRINTF("fail recv_from_slaves"); }
 
         t_now = get_time_ns();
@@ -135,9 +144,9 @@ int main(int argc, char **argv)
         
         //DPRINTF("@@ %d %u\n", slave_output[0].test._sint , slave_output[0].test._usint);
         //DPRINTF("@@ %d\n", slave_output[0].hyq_io._rel_enc[0]);
-        DPRINTF("@@ %d\n", hyqEsc->getPDO()._rel_enc[0]);
-        rtt = get_time_ns() - slave_output[0].test._ulint;
-        s_rtt(rtt);
+        DPRINTF("@@ %d\n", slavePtr->getPDO()._rel_enc[0]);
+        //rtt = get_time_ns() - slave_output[0].test._ulint;
+        //s_rtt(rtt);
         //DPRINTF("@@ rtt %llu\n", rtt); 
         //DPRINTF(">> %lld %lld %llu\n", timing.recv_dc_time % sync_cycle_time_ns , timing.offset, timing.loop_time); 
 

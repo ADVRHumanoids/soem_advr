@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include <iit/io/ecat/ec_master_iface.h>
-#include <iit/io/ecat/ec_slave.h>
+
 /**
  * 
  */
@@ -35,6 +35,8 @@
     static pthread_cond_t   ecat_cond;
 
     static iit::io::ecat::ec_timing_t ec_timing;
+
+    static const iit::io::ecat::SlavesMap* userSlaves = NULL;
 
 
     static int ecat_cycle(void) {
@@ -180,7 +182,11 @@
  * 
  * @return int expectedWKC
  */
-    int iit::io::ecat::initialize(const char* ifname, const uint64_t* ecat_cycle_ns, const uint64_t* ecat_cycle_shift_ns) {
+    int iit::io::ecat::initialize(
+            const char* ifname,
+            const uint64_t* ecat_cycle_ns,
+            const uint64_t* ecat_cycle_shift_ns)
+    {
 
 
         DPRINTF("[ECat_master] Using %s\n", ifname);
@@ -203,8 +209,6 @@
 
         ec_config_map(IOmap);
 
-        // map slaves 
-        slave_factory(ec_slave, ec_slavecount);
 
         // Wait for SAFE-OP
         ec_statecheck(0, EC_STATE_SAFE_OP,  EC_TIMEOUTSTATE * 4);
@@ -282,8 +286,26 @@
 
     }
 
+    int iit::io::ecat::setExpectedSlaves(const SlavesMap& expectedSlaves)
+    {
+        int ret = 0;
+        if( ec_slavecount != expectedSlaves.size() ) {
+            DPRINTF("[ECat_master] WARNING: expected %d slaves, %d found.\n",
+                    expectedSlaves.size(), ec_slavecount);
+            ret = 1;
+        }
+        userSlaves = & expectedSlaves;
 
-    int iit::io::ecat::recv_from_slaves(output_slave_t* slave_outputs, ec_timing_t* timing) {
+        return ret;
+    }
+
+
+    int iit::io::ecat::recv_from_slaves(ec_timing_t* timing) {
+
+        if(userSlaves == NULL) {
+            DPRINTF("[ECat_master] FATAL: the expected-slaves map was not initialized.\n");
+            return -1;
+        }
 
         int ret;
         // Xenomai pthread_cond_timedwait()
@@ -301,22 +323,8 @@
 
         //ret 0 on success,
         if ( ! ret ) {
-            for ( auto it = esc.begin(); it != esc.end(); it++ ) {
+            for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
                 it->second->readPDO();
-/*                switch ( it->second->product_code ) {
-
-                    case IIT_Advr_test_v0_3 :
-                        it->second->get_slave_outputs(slave_outputs[it->second->position-1].test);
-                        break;
-
-                    case IIT_Advr_HyQ_IO : 
-                        it->second->get_slave_outputs(slave_outputs[it->second->position-1].hyq_io);
-                        break;
-
-                    case IIT_Advr_HyQ_Valve:
-                        it->second->get_slave_outputs(slave_outputs[it->second->position-1].hyq_valve);
-                        break;
-                }*/
             }
         }
 

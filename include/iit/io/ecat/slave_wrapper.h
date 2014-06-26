@@ -2,7 +2,7 @@
  * slave_wrapper.h
  *
  *  Created on: Jun 25, 2014
- *      Author: mfrigerio
+ *      Author: Marco Frigerio, based on Alessio Margan's work
  */
 
 #ifndef IIT_IO_ECAT_SLAVE_WRAPPER_H_
