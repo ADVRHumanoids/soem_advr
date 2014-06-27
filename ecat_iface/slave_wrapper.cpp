@@ -8,7 +8,7 @@
 
 #include <iit/ecat/slave_wrapper.h>
 
-using namespace iit::io;
+using namespace iit;
 
 ecat::EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
 {

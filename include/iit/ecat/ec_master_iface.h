@@ -27,7 +27,6 @@ extern "C" {
 #define EC_TIMEOUT_US      500
 
 namespace iit {
-namespace io {
 namespace ecat {
 
 
@@ -67,7 +66,6 @@ int recv_from_slaves(ec_timing_t *);
 
 int send_to_slaves(input_slave_t*);
 
-}
 }
 }
 

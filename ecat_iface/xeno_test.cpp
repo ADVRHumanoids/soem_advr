@@ -49,7 +49,7 @@ static void set_signal_handler(void)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-using namespace iit::io::ecat;
+using namespace iit::ecat;
 
 input_slave_t   slave_input[4];
 output_slave_t  slave_output[4];

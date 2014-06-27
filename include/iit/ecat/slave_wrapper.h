@@ -21,7 +21,6 @@
 #include "ec_slave_type.h"
 
 namespace iit {
-namespace io {
 namespace ecat {
 
 class EscWrapper {
@@ -72,7 +71,6 @@ inline const hyq_io_pdo::rx_pdo_t& EscHyQ::getPDO() const
 
 
 
-}
 }
 }
 

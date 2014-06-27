@@ -34,9 +34,9 @@
     static pthread_mutex_t  ecat_mux_sync = PTHREAD_MUTEX_INITIALIZER;
     static pthread_cond_t   ecat_cond;
 
-    static iit::io::ecat::ec_timing_t ec_timing;
+    static iit::ecat::ec_timing_t ec_timing;
 
-    static const iit::io::ecat::SlavesMap* userSlaves = NULL;
+    static const iit::ecat::SlavesMap* userSlaves = NULL;
 
 
     static int ecat_cycle(void) {
@@ -182,7 +182,7 @@
  * 
  * @return int expectedWKC
  */
-    int iit::io::ecat::initialize(
+    int iit::ecat::initialize(
             const char* ifname,
             const uint64_t* ecat_cycle_ns,
             const uint64_t* ecat_cycle_shift_ns)
@@ -265,7 +265,7 @@
 
 
 
-    void iit::io::ecat::finalize(void) {
+    void iit::ecat::finalize(void) {
 
         DPRINTF("[ECat_master] Stop ecat_thread\n");
         ecat_thread_run = 0;
@@ -286,7 +286,7 @@
 
     }
 
-    int iit::io::ecat::setExpectedSlaves(const SlavesMap& expectedSlaves)
+    int iit::ecat::setExpectedSlaves(const SlavesMap& expectedSlaves)
     {
         int ret = 0;
         if( ec_slavecount != expectedSlaves.size() ) {
@@ -300,7 +300,7 @@
     }
 
 
-    int iit::io::ecat::recv_from_slaves(ec_timing_t* timing) {
+    int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
 
         if(userSlaves == NULL) {
             DPRINTF("[ECat_master] FATAL: the expected-slaves map was not initialized.\n");
@@ -332,7 +332,7 @@
         return ret;
     }
 
-    int iit::io::ecat::send_to_slaves(input_slave_t* slave_inputs) {
+    int iit::ecat::send_to_slaves(input_slave_t* slave_inputs) {
 
         int wkc;
 /*
