@@ -32,6 +32,7 @@ public:
     //void print_IOmap();
 
     virtual void readPDO() = 0;
+    const uint8_t* getRawData() const;
 protected:
     uint16_t alias;
     uint16_t position;

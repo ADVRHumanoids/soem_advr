@@ -7,10 +7,10 @@
     #include <rtdk.h>
 #endif
 
-#include <iit/io/ecat/ec_master_iface.h>
-#include <iit/io/ecat/ec_slave_type.h>
+#include <iit/ecat/ec_master_iface.h>
+#include <iit/ecat/ec_slave_type.h>
 
-#include <iit/io/ecat/slave_wrapper.h>
+#include <iit/ecat/slave_wrapper.h>
 
 
 

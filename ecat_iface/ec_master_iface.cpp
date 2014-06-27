@@ -19,7 +19,7 @@
 #include <pthread.h>
 #include <string.h>
 
-#include <iit/io/ecat/ec_master_iface.h>
+#include <iit/ecat/ec_master_iface.h>
 
 /**
  * 

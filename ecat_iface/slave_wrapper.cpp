@@ -6,7 +6,7 @@
  */
 
 
-#include <iit/io/ecat/slave_wrapper.h>
+#include <iit/ecat/slave_wrapper.h>
 
 using namespace iit::io;
 
