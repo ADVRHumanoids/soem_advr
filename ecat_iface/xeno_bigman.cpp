@@ -9,6 +9,7 @@
 
 #include "ec_master_iface.h"
 #include "ec_slave_type.h"
+#include "ec_slave.h"
 
 
 
@@ -81,36 +82,20 @@ int main(int argc, char **argv)
     rt_print_auto_init(1);
 #endif
 
-    char *      firmware_file = 0;
     int         expected_wkc;
-    uint64_t    sync_cycle_time_ns = 1e6;     //   1ms
-    //uint64_t    sync_cycle_time_ns = 0;         //   no dc 
+    uint64_t    sync_cycle_time_ns = 1e6;       //   1ms
     uint64_t    sync_cycle_offset_ns = 500e6;   // 500ms
-
 
     if ( argc > 1 ) {
         expected_wkc = initialize(argv[1], &sync_cycle_time_ns, &sync_cycle_offset_ns);
-    } 
-    if ( argc > 2 ) {
-        firmware_file = argv[2];
-    }
-    if ( argc < 1 || argc > 3) {
-    printf("Usage: %s ifname\nifname = {eth0,rteth0} for example\n", argv[0]);
+    } else {
+        printf("Usage: %s ifname\nifname = {eth0,rteth0} for example\n", argv[0]);
         return 0;
     }
 
     if ( expected_wkc < 0) {
         finalize();
         return 0;
-    }
-
-    if ( firmware_file ) {
-        // ask all slaves to go in INIT before update one
-        //update_slave_firmware(1, firmware_file, 0xB007);
-        update_slave_firmware(3, firmware_file, 0xB001);
-        req_state_check(0, EC_STATE_PRE_OP);
-        req_state_check(0, EC_STATE_SAFE_OP);
-        req_state_check(0, EC_STATE_OPERATIONAL);
     }
 
     struct timespec sleep_time = { 0, 400000 };
@@ -127,51 +112,43 @@ int main(int argc, char **argv)
     t_prec = get_time_ns();
     sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 150000;
     clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
-    slave_input[0].test._ts = get_time_ns();
+    slave_input[0].bigman._ts = get_time_ns();
     wkc = send_to_slaves(slave_input);
 
 
-    int ob = 0;
-
     while ( run_loop ) {
 
-        ///////////////////////////////////////////////////////////////////////
         // wait for cond_signal 
         // ecat_thread sync with DC
         ret = recv_from_slaves(slave_output, &timing);
         if ( ret < 0 ) { DPRINTF("fail recv_from_slaves"); }
 
+        // measure loop time
         t_now = get_time_ns();
         dt = t_now - t_prec;
         t_prec = t_now;  
         s_loop(dt);
         //DPRINTF("== loop %d\n", dt); 
-        
-        //DPRINTF("@@ %d %u %llu\n", slave_output[0].test._sint , slave_output[0].test._usint, slave_output[0].test._ulint);
-        rtt = get_time_ns() - slave_output[0].test._ulint;
+
+        // process rx data
+        //DPRINTF("@@ %d %u\n", slave_output[0].test._sint , slave_output[0].test._usint);
+        rtt = get_time_ns() - slave_output[0].bigman._ts;
         s_rtt(rtt);
         if (rtt > sync_cycle_time_ns) {
-            DPRINTF("\n@@ rtt %llu\n", rtt);
+            DPRINTF("\n@@ rtt %llu\n\n", rtt);
         }
 
         //DPRINTF("@@ rtt %llu\n", rtt); 
         //DPRINTF(">> %lld %lld %llu\n", timing.recv_dc_time % sync_cycle_time_ns , timing.offset, timing.loop_time); 
-#if 0
-        ob++;
-        wkc = ec_SDOwrite(1,0x8000,02,FALSE,sizeof(ob),&ob,EC_TIMEOUTRXM);
-        if (wkc <= 0 ) {
-            DPRINTF("fail sdo write\n");
-        }
-#endif
-        sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 200000;
-        //sleep_time.tv_nsec = 500000;
+        //DPRINTF("pos %f %lld\n", slave_output[0].bigman._pos, slave_output[0].bigman._ts); 
+        
+        
+        sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 150000;
         //DPRINTF("++ sleep %ld\n", sleep_time.tv_nsec);
         s_sleep(sleep_time.tv_nsec);
         clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
 
-        slave_input[0].test._ts = get_time_ns();
-        slave_input[0].test._type = 0xF1CA;
-        slave_input[0].test._value = 0xDEADBEEF;
+        slave_input[0].bigman._ts = get_time_ns();
         wkc = send_to_slaves(slave_input);
 
         retry = 2;

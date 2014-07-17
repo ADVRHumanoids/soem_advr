@@ -34,16 +34,23 @@ extern "C" {
 }
 #endif
 
+#include <fstream>
 #include <map>
+
 #include <boost/shared_ptr.hpp>
+#include <boost/format.hpp>
+#include <boost/circular_buffer.hpp>
 
 #include "utils.h"
+#include "ec_slave_type.h"
 
 #define IIT_VENDOR_ID       0x00000298
 
 #define IIT_Advr_test_v0_3  0x00000003
 #define IIT_Advr_HyQ_IO     0x00000004
 #define IIT_Advr_HyQ_Valve  0x00000005
+#define IIT_Advr_BigMan     0x00000010
+#define IIT_rt_labs         0x000004d2
 
 class Esc;
 typedef boost::shared_ptr<Esc>  EscPtr;
@@ -71,9 +78,10 @@ public:
     uint32_t vendor_id;
     uint32_t product_code;
 
-
     uint8_t   * inputs, * outputs;    
     uint32_t  nbytes_input, nbytes_output;
+
+    boost::circular_buffer<output_slave_t> ec_log;
 
     // slave input is master output
     template <typename T> void set_slave_inputs(T &slave_inputs) {
@@ -118,6 +126,17 @@ class Esc_HyQ_Valve : public Esc {
 public:
     Esc_HyQ_Valve(ec_slavet slave);
     virtual ~Esc_HyQ_Valve() {}
+
+};
+
+/**
+ * 
+ */
+class Esc_BigMan : public Esc {
+
+public:
+    Esc_BigMan(ec_slavet slave);
+    virtual ~Esc_BigMan();
 
 };
 

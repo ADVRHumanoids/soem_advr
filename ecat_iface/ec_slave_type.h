@@ -98,16 +98,40 @@ namespace hyq_valve_pdo {
 
 }
 
+namespace bigman_pdo {
+
+// TX  slave_input -- master output
+    typedef struct {
+        float       _type;
+        float       _value;
+        uint64_t    _ts;
+    } __attribute__((__packed__)) tx_pdo_t;
+
+
+// RX  slave_output -- master input
+    typedef struct {
+        float       _pos_ref;
+        float       _pos;
+        float       _tor_ref;
+        float       _tor;
+        uint64_t    _ts;
+    } __attribute__((__packed__)) rx_pdo_t; 
+
+
+}
+
 typedef union {
     test_pdo::tx_pdo_t      test;
     hyq_io_pdo::tx_pdo_t    hyq_io;
     hyq_valve_pdo::tx_pdo_t hyq_valve;
+    bigman_pdo::tx_pdo_t    bigman;
 } input_slave_t;
 
 typedef union {
     test_pdo::rx_pdo_t       test;
     hyq_io_pdo::rx_pdo_t     hyq_io;
     hyq_valve_pdo::rx_pdo_t  hyq_valve;
+    bigman_pdo::rx_pdo_t     bigman;
 } output_slave_t;
 
 #endif

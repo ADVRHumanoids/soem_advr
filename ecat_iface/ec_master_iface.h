@@ -2,6 +2,7 @@
 #define __ECAT_MASTER_IFACE_H__
 
 #include <stdint.h>
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,11 +51,13 @@ namespace ec_master_iface {
  */
     void finalize(void);
 
+    bool req_state_check(uint16 slave, uint16_t req_state);
 
     int recv_from_slaves(output_slave_t*, ec_timing_t *);
 
     int send_to_slaves(input_slave_t*);
 
+    int update_slave_firmware(uint16_t slave, std::string firmware, uint32_t passwd_firm);
 }
 
 #endif

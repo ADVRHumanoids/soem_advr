@@ -205,6 +205,7 @@ void ecatcheck( void *ptr )
         usleep(10000);
     }   
 }   
+
 static void warn_upon_switch(int sig __attribute__((unused)))
 {
     // handle rt to nrt contex switch

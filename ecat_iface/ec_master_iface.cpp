@@ -54,8 +54,8 @@ namespace ec_master_iface {
 /* PI calculation to get linux rx thread synced to DC time */
     static void ec_sync(const int64_t reftime, const uint64_t cycletime , int64_t* offsettime)
     {
-        /* master sync point later than DC sync */
-        static const uint32_t sync_point_ns = 500000;
+        /* master sync offset with ec_DCtime */
+        static const uint32_t sync_point_ns = 300000; //500000;
         static int64_t integral = 0;
         int64_t delta;
 
@@ -114,6 +114,20 @@ namespace ec_master_iface {
             wkc = ecat_cycle();
             pthread_mutex_unlock(&ecat_mutex);
 
+             if ( ec_slave[0].hasdc && cycle_time_ns != 0 ) {
+                /* calulate toff to get linux time and DC synced */
+                ec_sync(ec_DCtime, cycle_time_ns, &toff);
+                t_now = get_time_ns();
+                t_delta =  t_now - t_prec;
+                t_prec = t_now;
+
+                ec_timing.recv_dc_time = ec_DCtime;
+                ec_timing.offset = toff;
+                ec_timing.loop_time = t_delta;
+            } else {
+                toff = 250000;
+            }
+
             if ( wkc >= expectedWKC ) {
 
                 pthread_mutex_lock(&ecat_mux_sync);
@@ -121,21 +135,8 @@ namespace ec_master_iface {
                 pthread_mutex_unlock(&ecat_mux_sync);
 
             } else {
-                ;//DPRINTF("wkc %d\n", wkc);
+                //DPRINTF("wkc %d\n", wkc);
             }
-
-
-            if ( ec_slave[0].hasdc ) {
-                /* calulate toff to get linux time and DC synced */
-                ec_sync(ec_DCtime, cycle_time_ns, &toff);
-                t_now = get_time_ns();
-                t_delta =  t_now - t_prec;
-                t_prec = t_now;
-            }
-
-            ec_timing.recv_dc_time = ec_DCtime;
-            ec_timing.offset = toff;
-            ec_timing.loop_time = t_delta;
 
         }    
     }
@@ -172,6 +173,71 @@ namespace ec_master_iface {
 
     }
 
+    bool req_state_check(uint16 slave, uint16_t req_state) {
+
+        uint16_t act_state;
+        uint16_t ec_error_mask = 0x10;
+        uint16_t ec_state_mask = 0x0F;
+
+        if (slave == 0) {
+            DPRINTF("[ECat_master] Request 0x%02X state for all slaves\n", req_state);
+        } else {
+            DPRINTF("[ECat_master] Request 0x%02X state for %d slave\n", req_state, slave);
+        }
+
+        ec_slave[slave].state = req_state;
+        ec_writestate(slave);
+        // just check req_state ... no error indication bit is check
+        act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 3); 
+
+        if ( req_state != act_state) {
+            // not all slave reached requested state ... find who and check error indication bit
+            ec_readstate();
+
+            if (slave == 0) {
+
+                for ( int i = 1; i<=ec_slavecount ; i++ ) {
+                    if ( ec_slave[i].state != req_state ) {
+                        DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
+                               i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
+
+                        if (ec_slave[i].state & ec_error_mask) {
+                            // attemping to ack
+                            ec_slave[i].state = (req_state & ec_state_mask) + EC_STATE_ACK;
+                            ec_writestate(i);
+                            act_state = ec_statecheck(i, req_state,  EC_TIMEOUTSTATE * 3); 
+                            if ( req_state != act_state) {
+                                // still req_state not reached ...
+                                DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
+                                        i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
+                            }
+                        }
+
+
+                    }
+                }
+            } else {
+                DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
+                       slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
+
+                if (ec_slave[slave].state & ec_error_mask) {
+                    // attemping to ack
+                    ec_slave[slave].state = (req_state & ec_state_mask) + EC_STATE_ACK;
+                    ec_writestate(slave);
+                    act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 3); 
+                    if ( req_state != act_state) {
+                        // still req_state not reached ...
+                        DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
+                                slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
+                    }
+                }
+
+            }
+
+        }
+
+        return (act_state == req_state);
+    }
 /**
  * 
  * 
@@ -192,7 +258,8 @@ namespace ec_master_iface {
             return 0;
         }
 
-        ec_config_init(FALSE);
+        // retunr workcounter of slave discover datagram = number of slaves found
+        ec_config(FALSE, &IOmap);
 
         DPRINTF("[ECat_master] %d EtherCAT slaves identified.\n", ec_slavecount);
         if ( ec_slavecount < 1 ) {
@@ -200,49 +267,44 @@ namespace ec_master_iface {
             return 0;
         }
 
+        // map slaves 
+        slave_factory(ec_slave, ec_slavecount);
+
+        req_state_check(0, EC_STATE_PRE_OP);
+
         if ( ! ec_configdc() ) {
             DPRINTF("[ECat_master] Failed to config DC\n");
         }
 
-        ec_config_map(IOmap);
-
-        // map slaves 
-        slave_factory(ec_slave, ec_slavecount);
-
-        // Wait for SAFE-OP
-        ec_statecheck(0, EC_STATE_SAFE_OP,  EC_TIMEOUTSTATE * 4);
-
-        // Configure DC
-        if ( ecat_cycle_ns > 0 ) {
+        // Configure DC if ...
+        if ( *ecat_cycle_ns > 0 ) {
+            DPRINTF("[ECat_master] Configure DC\n");
             // Configure the distributed clocks for each slave.
             for ( int i = 1; i <= ec_slavecount; i++ ) {
                 ec_dcsync0(i, true, *ecat_cycle_ns, *ecat_cycle_shift_ns);
             }
         }
 
-        // Send the EtherCAT slaves into OP
-        DPRINTF("[ECat_master] Request OP\n");
-        ec_slave[0].state = EC_STATE_OPERATIONAL;
-        ec_writestate(0);
-        if ( EC_STATE_OPERATIONAL != ec_statecheck(0, EC_STATE_OPERATIONAL,  EC_TIMEOUTSTATE * 2) ) {
-            DPRINTF("[ECat_master] NOT all slaves OP\n");
+        req_state_check(0, EC_STATE_SAFE_OP);
+
+        if ( ! req_state_check(0, EC_STATE_OPERATIONAL) ) {
+            // exit .. otherwise with stuck in next loop
+            // !! if the bootloader is running the only allowed state are INIT and BOOT
             return 0;
-        } else {
-            DPRINTF("[ECat_master] All slaves OP\n");
         }
 
-        // We are now in OP.
+        // We are now in OP ...
 
-
-        // Update ec_DCtime so we can calculate stop time below.
-        ecat_cycle();
-        // Send a barrage of packets to set up the DC clock.
-        int64_t stoptime = ec_DCtime + *ecat_cycle_shift_ns/2;
-        // SOEM automatically updates ec_DCtime.
-        while ( ec_DCtime < stoptime ) {
+        if ( *ecat_cycle_ns > 0 ) {
+            // Update ec_DCtime so we can calculate stop time below.
             ecat_cycle();
+            // Send a barrage of packets to set up the DC clock.
+            int64_t stoptime = ec_DCtime + *ecat_cycle_shift_ns/2;
+            // SOEM automatically updates ec_DCtime.
+            while ( ec_DCtime < stoptime ) {
+                ecat_cycle();
+            }
         }
-
         // We now have data.
 
         expectedWKC = (ec_group[0].outputsWKC * 2) + ec_group[0].inputsWKC;
@@ -274,11 +336,7 @@ namespace ec_master_iface {
             ec_dcsync0(i, FALSE, 0, 0); // SYNC0 off
         }
 
-        DPRINTF("[ECat_master] Request preop state for all slaves\n");
-        ec_slave[0].state = EC_STATE_PRE_OP;
-        /* request PRE_OP state for all slaves */
-        ec_writestate(0);
-        ec_statecheck(0, EC_STATE_PRE_OP,  EC_TIMEOUTSTATE * 4);
+        req_state_check(0, EC_STATE_INIT);
 
         ec_close();
         DPRINTF("[ECat_master] close\n");
@@ -308,6 +366,7 @@ namespace ec_master_iface {
                 switch ( it->second->product_code ) {
                     
                     case IIT_Advr_test_v0_3 :
+                    case IIT_rt_labs :
                         it->second->get_slave_outputs(slave_outputs[it->second->position-1].test);
                         break;
 
@@ -318,7 +377,12 @@ namespace ec_master_iface {
                     case IIT_Advr_HyQ_Valve:
                         it->second->get_slave_outputs(slave_outputs[it->second->position-1].hyq_valve);
                         break;
+
+                    case IIT_Advr_BigMan:
+                        it->second->get_slave_outputs(slave_outputs[it->second->position-1].bigman);
+                        break;
                 }
+                it->second->ec_log.push_back(slave_outputs[it->second->position-1]);
             }
         }
 
@@ -334,6 +398,7 @@ namespace ec_master_iface {
             switch ( it->second->product_code ) {
                 
                 case IIT_Advr_test_v0_3 :
+                case IIT_rt_labs :
                     it->second->set_slave_inputs(slave_inputs[it->second->position-1].test);
                     break;
 
@@ -343,6 +408,10 @@ namespace ec_master_iface {
 
                 case IIT_Advr_HyQ_Valve:
                     it->second->set_slave_inputs(slave_inputs[it->second->position-1].hyq_valve);
+                    break;
+
+                case IIT_Advr_BigMan:
+                    it->second->set_slave_inputs(slave_inputs[it->second->position-1].bigman);
                     break;
             }
         }
@@ -356,5 +425,33 @@ namespace ec_master_iface {
 
     }
 
+    int update_slave_firmware(uint16_t slave, std::string firmware, uint32_t passwd_firm) {
+
+        req_state_check(0, EC_STATE_INIT);
+        
+        // first boot state request is handled by application that jump to bootloader
+        // we do NOT have a state change in the slave
+        req_state_check(slave, EC_STATE_BOOT);
+
+        // second boot state request is handled by bootloader
+        // now the slave should go in BOOT state
+        if ( ! req_state_check(slave, EC_STATE_BOOT) ) {
+            DPRINTF("Slave %d not changed to BOOT state.\n", slave);
+            return 0;
+        }
+
+        std::ifstream firm(firmware);
+        std::string firm_buff((std::istreambuf_iterator<char>(firm)), std::istreambuf_iterator<char>());
+
+        DPRINTF("File read OK, %d bytes.\n",firm_buff.length());
+        DPRINTF("Update ....\n");
+        int result = ec_FOEwrite(slave, (char*)firmware.c_str(), passwd_firm, firm_buff.length() ,(void*)firm_buff.c_str(), EC_TIMEOUTSTATE);
+        if (result < 0 ) 
+            DPRINTF("Fail with code %d\n", result);
+
+        req_state_check(slave, EC_STATE_INIT);
+
+        return result;
+    }
 }
 
