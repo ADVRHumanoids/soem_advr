@@ -28,6 +28,7 @@ endif()
 ## Your package locations should be listed before other locations
 include_directories(${soem_SOURCE_DIR}/include)
 include_directories(./include)
+include_directories(./include/soem-1.3.0) # not to break compilability in the soem sources
 
 add_library(soem	
   src/osal.c

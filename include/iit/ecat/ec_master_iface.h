@@ -7,17 +7,22 @@
 
 #ifdef __cplusplus
 extern "C" {
-#include "ethercattype.h"
-#include "nicdrv.h"
-#include "ethercatbase.h"
-#include "ethercatmain.h"
-#include "ethercatdc.h"
-#include "ethercatcoe.h"
-#include "ethercatfoe.h"
-#include "ethercatconfig.h"
-#include "ethercatprint.h"
+#endif
+
+#include <soem-1.3.0/ethercattype.h>
+#include <soem-1.3.0/nicdrv.h>
+#include <soem-1.3.0/ethercatbase.h>
+#include <soem-1.3.0/ethercatmain.h>
+#include <soem-1.3.0/ethercatdc.h>
+#include <soem-1.3.0/ethercatcoe.h>
+#include <soem-1.3.0/ethercatfoe.h>
+#include <soem-1.3.0/ethercatconfig.h>
+#include <soem-1.3.0/ethercatprint.h>
+
+#ifdef __cplusplus
 }
 #endif
+
 
 #include "utils.h"
 #include "ec_slave_type.h"
