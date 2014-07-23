@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     if ( argc > 2 ) {
         firmware_file = argv[2];
     }
-    if ( argc < 1 || argc > 3) {
+    if ( argc <= 1 || argc > 3) {
     printf("Usage: %s ifname\nifname = {eth0,rteth0} for example\n", argv[0]);
         return 0;
     }
@@ -106,11 +106,13 @@ int main(int argc, char **argv)
 
     if ( firmware_file ) {
         // ask all slaves to go in INIT before update one
-        //update_slave_firmware(1, firmware_file, 0xB007);
-        update_slave_firmware(3, firmware_file, 0xB001);
-        req_state_check(0, EC_STATE_PRE_OP);
-        req_state_check(0, EC_STATE_SAFE_OP);
-        req_state_check(0, EC_STATE_OPERATIONAL);
+        update_slave_firmware(1, "ecat.bin", 0xB007);
+        update_slave_firmware(2, "valves_board", 0xB002);
+        update_slave_firmware(3, "hub_board.bin", 0xB001);
+        
+        sleep(1);
+        finalize();
+        expected_wkc = initialize(argv[1], &sync_cycle_time_ns, &sync_cycle_offset_ns);
     }
 
     struct timespec sleep_time = { 0, 400000 };
@@ -125,7 +127,7 @@ int main(int argc, char **argv)
     ret = recv_from_slaves(slave_output, &timing);
     if ( ret < 0 ) { DPRINTF("fail recv_from_slaves"); }
     t_prec = get_time_ns();
-    sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 150000;
+    sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 200000;
     clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
     slave_input[0].test._ts = get_time_ns();
     wkc = send_to_slaves(slave_input);
@@ -151,7 +153,7 @@ int main(int argc, char **argv)
         rtt = get_time_ns() - slave_output[0].test._ulint;
         s_rtt(rtt);
         if (rtt > sync_cycle_time_ns) {
-            DPRINTF("\n@@ rtt %llu\n", rtt);
+            ;//DPRINTF("\n@@ rtt %llu\n", rtt);
         }
 
         //DPRINTF("@@ rtt %llu\n", rtt); 
