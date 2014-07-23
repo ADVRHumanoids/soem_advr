@@ -20,15 +20,22 @@ if(ENABLE_RTNET AND RTNET_INCLUDE_DIR)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${XENO_LDFLAGS} -lnative")
 endif()
 
+set(HEADER_INSTALL_ROOT /usr/local/include/ CACHE PATH "Where to install the headers")
+set(LIB_INSTALL_ROOT /usr/local/lib/ CACHE PATH "Where to install the libraries")
+
 ###########
 ## Build ##
 ###########
+set(SOEM_LIB_NAME soem)
+set(IIT_LIB_NAME iitecat_iface)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(${soem_SOURCE_DIR}/include)
+include_directories(./include)
+include_directories(./include/soem-1.3.0) # not to break compilability in the soem sources
 
-add_library(soem	
+add_library(${SOEM_LIB_NAME}
   src/osal.c
   src/oshw.c
   src/nicdrv.c
@@ -42,7 +49,7 @@ add_library(soem
   src/ethercatbase.c
 )
 
-target_link_libraries(soem pthread rt)
+target_link_libraries(${SOEM_LIB_NAME} pthread rt)
 
 
 add_executable(simple_test test/simple_test.c)
@@ -53,27 +60,26 @@ add_executable(ebox test/ebox.c)
 add_executable(aliastool test/aliastool.c)
 add_executable(slaveinfo test/slaveinfo.c)
 
-target_link_libraries(simple_test soem)
-target_link_libraries(red_test soem)
-target_link_libraries(firm_update soem)
-target_link_libraries(eepromtool soem)
-target_link_libraries(ebox soem)
-target_link_libraries(aliastool soem)
-target_link_libraries(slaveinfo soem)
+target_link_libraries(simple_test ${SOEM_LIB_NAME})
+target_link_libraries(red_test ${SOEM_LIB_NAME})
+target_link_libraries(firm_update ${SOEM_LIB_NAME})
+target_link_libraries(eepromtool ${SOEM_LIB_NAME})
+target_link_libraries(ebox ${SOEM_LIB_NAME})
+target_link_libraries(aliastool ${SOEM_LIB_NAME})
+target_link_libraries(slaveinfo ${SOEM_LIB_NAME})
 
 
-add_library(ecat_iface
+add_library(${IIT_LIB_NAME}
+  ecat_iface/slave_wrapper.cpp
   ecat_iface/ec_master_iface.cpp
-  ecat_iface/ec_slave.cpp
 )	
-
-
-target_link_libraries(ecat_iface soem)
-
+target_link_libraries(${IIT_LIB_NAME} ${SOEM_LIB_NAME})
 
 add_executable(xeno_test ecat_iface/xeno_test.cpp)
-target_link_libraries(xeno_test ecat_iface)
+target_link_libraries(xeno_test ${IIT_LIB_NAME})
 
-add_executable(xeno_bigman ecat_iface/xeno_bigman.cpp)
-target_link_libraries(xeno_bigman ecat_iface)
 
+# Install
+install(DIRECTORY include/  DESTINATION ${HEADER_INSTALL_ROOT})
+install(TARGETS ${SOEM_LIB_NAME} ARCHIVE DESTINATION ${LIB_INSTALL_ROOT})
+install(TARGETS ${IIT_LIB_NAME}  ARCHIVE DESTINATION ${LIB_INSTALL_ROOT})

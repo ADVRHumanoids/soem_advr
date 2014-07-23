@@ -31,7 +31,7 @@ namespace test_pdo {
         int64_t     _lint;
         uint64_t    _ulint;
         float       _real;
-    } __attribute__((__packed__)) rx_pdo_t; 
+    } __attribute__((__packed__)) rx_pdo_t;
 
 
 }

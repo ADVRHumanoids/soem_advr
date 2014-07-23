@@ -7,8 +7,10 @@
     #include <rtdk.h>
 #endif
 
-#include "ec_master_iface.h"
-#include "ec_slave_type.h"
+#include <iit/ecat/ec_master_iface.h>
+#include <iit/ecat/ec_slave_type.h>
+
+#include <iit/ecat/slave_wrapper.h>
 
 
 
@@ -47,7 +49,7 @@ static void set_signal_handler(void)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-using namespace ec_master_iface;
+using namespace iit::ecat;
 
 input_slave_t   slave_input[4];
 output_slave_t  slave_output[4];
@@ -104,6 +106,13 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    SlavesMap slaves;
+    EscHyQ* slavePtr = new EscHyQ(ec_slave[1]);
+    slaves[1] = ESCPtr(slavePtr);
+
+    setExpectedSlaves(slaves);
+
+
     if ( firmware_file ) {
         // ask all slaves to go in INIT before update one
         update_slave_firmware(1, "ecat.bin", 0xB007);
@@ -115,6 +124,7 @@ int main(int argc, char **argv)
         expected_wkc = initialize(argv[1], &sync_cycle_time_ns, &sync_cycle_offset_ns);
     }
 
+
     struct timespec sleep_time = { 0, 400000 };
     uint64_t        t_prec = 0, t_now, dt;
     uint64_t        rtt = 0;
@@ -124,7 +134,7 @@ int main(int argc, char **argv)
     stat_t s_loop, s_rtt, s_sleep;
 
     // warm up ... just for stat_t accumulators
-    ret = recv_from_slaves(slave_output, &timing);
+    ret = recv_from_slaves( &timing);
     if ( ret < 0 ) { DPRINTF("fail recv_from_slaves"); }
     t_prec = get_time_ns();
     sleep_time.tv_nsec = sync_cycle_time_ns - (timing.recv_dc_time % sync_cycle_time_ns) - 200000;
@@ -140,7 +150,7 @@ int main(int argc, char **argv)
         ///////////////////////////////////////////////////////////////////////
         // wait for cond_signal 
         // ecat_thread sync with DC
-        ret = recv_from_slaves(slave_output, &timing);
+        ret = recv_from_slaves( &timing);
         if ( ret < 0 ) { DPRINTF("fail recv_from_slaves"); }
 
         t_now = get_time_ns();
