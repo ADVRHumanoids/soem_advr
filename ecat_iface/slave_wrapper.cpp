@@ -7,14 +7,16 @@
 
 #include <string.h>
 
+#include <iit/ecat/utils.h>
 #include <iit/ecat/slave_wrapper.h>
 
 using namespace iit;
 
 ecat::EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
 {
-    //DPRINTF(">> factory %x id %d conf_addr %x rev %d alias %d\n",_slave_arg.eep_man, _slave_arg.eep_id, _slave_arg.configadr & 0x0f, _slave_arg.eep_rev, _slave_arg.aliasadr);
-    //DPRINTF("   Ibytes %d Obytes %d\n", _slave_arg.Ibytes, _slave_arg.Obytes);
+    ec_slavet _slave_arg = slave_descriptor;
+    DPRINTF(">> factory %x id %d conf_addr %x rev %d alias %d\n",_slave_arg.eep_man, _slave_arg.eep_id, _slave_arg.configadr & 0x0f, _slave_arg.eep_rev, _slave_arg.aliasadr);
+    DPRINTF("   Ibytes %d Obytes %d\n", _slave_arg.Ibytes, _slave_arg.Obytes);
 
     position =      slave_descriptor.configadr & 0x0f;
     vendor_id =     slave_descriptor.eep_man;
@@ -28,7 +30,3 @@ ecat::EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
 }
 
 
-void ecat::EscHyQ::readPDO()
-{
-    memcpy((void*)&rx_pdo, inputs, nbytes_in);
-}

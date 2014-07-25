@@ -21,60 +21,36 @@
 #include "ec_slave_type.h"
 
 namespace iit {
-namespace ecat {
+    namespace ecat {
 
-class EscWrapper {
-public:
-    EscWrapper(const ec_slavet& slave_descriptor);
-    virtual ~EscWrapper() {};
+        class EscWrapper {
+        public:
+            EscWrapper(const ec_slavet& slave_descriptor);
+            virtual ~EscWrapper() {};
 
-    //void print_IOmap();
+            //void print_IOmap();
 
-    virtual void readPDO() = 0;
-    const uint8_t* getRawData() const;
-protected:
-    uint16_t alias;
-    uint16_t position;
-    uint32_t vendor_id;
-    uint32_t product_code;
+            virtual void readPDO() = 0;
+            virtual void writePDO() = 0;
 
+            const uint8_t* getRawData() const;
 
-    uint8_t   * inputs, * outputs;
-    uint32_t  nbytes_in, nbytes_out;
-
-
-};
+        protected:
+            uint16_t alias;
+            uint16_t position;
+            uint32_t vendor_id;
+            uint32_t product_code;
 
 
-class EscHyQHub : public EscWrapper
-{
-public:
-    EscHyQHub(const ec_slavet& slave_descriptor) :
-        EscWrapper(slave_descriptor)
-    {}
-
-    ~EscHyQHub() {}
-
-    void readPDO();
-
-    const hyq_io_pdo::rx_pdo_t& getPDO() const;
-
-    void setPDO(hyq_io_pdo::tx_pdo_t&) const;
-
-private:
-    hyq_io_pdo::rx_pdo_t rx_pdo;
-    hyq_io_pdo::tx_pdo_t tx_pdo;
-};
+            uint8_t   * inputs, * outputs;
+            uint32_t  nbytes_in, nbytes_out;
 
 
-inline const hyq_io_pdo::rx_pdo_t& EscHyQHub::getPDO() const
-{
-    return rx_pdo;
-}
+        };
 
 
 
-}
+    }
 }
 
 #endif /* IIT_IO_ECAT_SLAVE_WRAPPER_H_ */

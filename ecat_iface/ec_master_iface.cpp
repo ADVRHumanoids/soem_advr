@@ -396,32 +396,14 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     return ret;
 }
 
-int iit::ecat::send_to_slaves(input_slave_t* slave_inputs) {
+int iit::ecat::send_to_slaves(void) {
 
     int wkc;
-/*
-        for ( auto it = esc.begin(); it != esc.end(); it++ ) {
-            switch ( it->second->product_code ) {
 
-                case IIT_Advr_test_v0_3 :
-                case IIT_rt_labs :
-                    it->second->set_slave_inputs(slave_inputs[it->second->position-1].test);
-                    break;
+    for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
+        it->second->writePDO();
+    }
 
-                case IIT_Advr_HyQ_IO : 
-                    it->second->set_slave_inputs(slave_inputs[it->second->position-1].hyq_io);
-                    break;
-
-                case IIT_Advr_HyQ_Valve:
-                    it->second->set_slave_inputs(slave_inputs[it->second->position-1].hyq_valve);
-                    break;
-
-                case IIT_Advr_BigMan:
-                    it->second->set_slave_inputs(slave_inputs[it->second->position-1].bigman);
-                    break;
-            }
-        }
-*/
     pthread_mutex_lock(&ecat_mutex);
     //ec_send_processdata();
     wkc = ecat_cycle();

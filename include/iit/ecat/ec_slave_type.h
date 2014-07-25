@@ -3,7 +3,7 @@
 
 namespace test_pdo {
 
-// TX  slave_input -- master output
+    // TX  slave_input -- master output
     typedef struct {
         uint16_t    _type;
         int32_t     _value;
@@ -11,7 +11,7 @@ namespace test_pdo {
     } __attribute__((__packed__)) tx_pdo_t;
 
 
-// RX  slave_output -- master input
+    // RX  slave_output -- master input
     typedef struct {
         uint8_t     _bit_0:1;
         uint8_t     _bit_1:1;

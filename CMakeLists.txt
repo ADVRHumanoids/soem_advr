@@ -75,8 +75,8 @@ add_library(${IIT_LIB_NAME}
 )	
 target_link_libraries(${IIT_LIB_NAME} ${SOEM_LIB_NAME})
 
-add_executable(xeno_test ecat_iface/xeno_test.cpp)
-target_link_libraries(xeno_test ${IIT_LIB_NAME})
+#add_executable(xeno_test ecat_iface/xeno_test.cpp)
+#target_link_libraries(xeno_test ${IIT_LIB_NAME})
 
 
 # Install

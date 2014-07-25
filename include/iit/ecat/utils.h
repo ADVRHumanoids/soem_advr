@@ -67,9 +67,9 @@ inline uint64_t get_time_ns(clockid_t clock_id=CLOCK_MONOTONIC)
 
 
 /* add ns to timespec */
-inline void add_timespec(struct timespec *ts, int64 addtime)
+inline void add_timespec(struct timespec *ts, int64_t addtime)
 {
-    int64 sec, nsec;
+    int64_t sec, nsec;
 
     nsec = addtime % NSEC_PER_SEC;
     sec = (addtime - nsec) / NSEC_PER_SEC;
