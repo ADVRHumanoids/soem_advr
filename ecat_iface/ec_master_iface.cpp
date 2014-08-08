@@ -190,7 +190,7 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
     ec_slave[slave].state = req_state;
     ec_writestate(slave);
     // just check req_state ... no error indication bit is check
-    act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 3); 
+    act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 5); 
 
     if ( req_state != act_state ) {
         // not all slave reached requested state ... find who and check error indication bit
@@ -207,7 +207,7 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
                         // attemping to ack
                         ec_slave[i].state = (req_state & ec_state_mask) + EC_STATE_ACK;
                         ec_writestate(i);
-                        act_state = ec_statecheck(i, req_state,  EC_TIMEOUTSTATE * 3); 
+                        act_state = ec_statecheck(i, req_state,  EC_TIMEOUTSTATE * 5); 
                         if ( req_state != act_state ) {
                             // still req_state not reached ...
                             DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
@@ -226,7 +226,7 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
                 // attemping to ack
                 ec_slave[slave].state = (req_state & ec_state_mask) + EC_STATE_ACK;
                 ec_writestate(slave);
-                act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 3); 
+                act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 5); 
                 if ( req_state != act_state ) {
                     // still req_state not reached ...
                     DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
@@ -273,9 +273,6 @@ int iit::ecat::initialize(
         return 0;
     }
 
-    if ( ! ec_configdc() ) {
-        DPRINTF("[ECat_master] Failed to config DC\n");
-    }
 
     req_state_check(0, EC_STATE_PRE_OP);
 
@@ -338,6 +335,8 @@ void iit::ecat::finalize(void) {
     DPRINTF("[ECat_master] Stop ecat_thread\n");
     ecat_thread_run = 0;
     pthread_join(ecat_thread_id, NULL);
+
+    req_state_check(0, EC_STATE_PRE_OP);
 
     for ( int i = 1; i <= ec_slavecount; i++ ) {
         ec_dcsync0(i, FALSE, 0, 0); // SYNC0 off
@@ -437,6 +436,7 @@ int iit::ecat::update_slave_firmware(uint16_t slave, std::string firmware, uint3
     if ( result < 0 )
         DPRINTF("Fail with code %d\n", result);
 
+    //INIT state request is handled by bootloader that jump to application that start from INIT
     req_state_check(slave, EC_STATE_INIT);
 
     return result;

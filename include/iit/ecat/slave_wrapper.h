@@ -18,7 +18,7 @@
 #include <soem-1.3.0/ethercatconfig.h>
 #include <soem-1.3.0/ethercatprint.h>
 
-#include "ec_slave_type.h"
+//#include "ec_slave_type.h"
 
 namespace iit {
     namespace ecat {

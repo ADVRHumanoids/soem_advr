@@ -3,6 +3,8 @@ project(soem)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+OPTION (BUILD_SHARED_LIBS "Build shared libraries." OFF)
+
 #find_path(RTNET_INCLUDE_DIR NAMES rtnet.h HINTS /usr/local/rtnet/include )
 find_path(RTNET_INCLUDE_DIR NAMES rtnet.h PATH_SUFFIXES rtnet/include)
 #set(RTNET_INCLUDE_DIR "/usr/local/rtnet/include")
@@ -75,11 +77,11 @@ add_library(${IIT_LIB_NAME}
 )	
 target_link_libraries(${IIT_LIB_NAME} ${SOEM_LIB_NAME})
 
-#add_executable(xeno_test ecat_iface/xeno_test.cpp)
-#target_link_libraries(xeno_test ${IIT_LIB_NAME})
+add_executable(ec_iface_firm_update ecat_iface/ec_iface_firm_update.cpp)
+target_link_libraries(ec_iface_firm_update ${IIT_LIB_NAME})
 
 
 # Install
 install(DIRECTORY include/  DESTINATION ${HEADER_INSTALL_ROOT})
-install(TARGETS ${SOEM_LIB_NAME} ARCHIVE DESTINATION ${LIB_INSTALL_ROOT})
-install(TARGETS ${IIT_LIB_NAME}  ARCHIVE DESTINATION ${LIB_INSTALL_ROOT})
+install(TARGETS ${SOEM_LIB_NAME} DESTINATION ${LIB_INSTALL_ROOT})
+install(TARGETS ${IIT_LIB_NAME}  DESTINATION ${LIB_INSTALL_ROOT})
