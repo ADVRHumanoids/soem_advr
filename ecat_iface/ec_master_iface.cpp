@@ -129,7 +129,6 @@ void * ecat_thread( void* cycle_ns )
         } else {
             toff = 250000;
         }
-
         if ( wkc >= expectedWKC ) {
 
             pthread_mutex_lock(&ecat_mux_sync);
@@ -202,8 +201,7 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
                 if ( ec_slave[i].state != req_state ) {
                     DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                             i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
-
-                    if ( ec_slave[i].state & ec_error_mask ) {
+                    //if ( ec_slave[i].state & ec_error_mask ) {
                         // attemping to ack
                         ec_slave[i].state = (req_state & ec_state_mask) + EC_STATE_ACK;
                         ec_writestate(i);
@@ -213,16 +211,13 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
                             DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                                     i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
                         }
-                    }
-
-
+                    //}
                 }
             }
         } else {
             DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                     slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
-
-            if ( ec_slave[slave].state & ec_error_mask ) {
+            //if ( ec_slave[slave].state & ec_error_mask ) {
                 // attemping to ack
                 ec_slave[slave].state = (req_state & ec_state_mask) + EC_STATE_ACK;
                 ec_writestate(slave);
@@ -232,8 +227,7 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
                     DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                             slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
                 }
-            }
-
+            //}
         }
 
     }

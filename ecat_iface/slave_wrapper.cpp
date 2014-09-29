@@ -28,5 +28,3 @@ ecat::EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
     nbytes_out = slave_descriptor.Obytes;
 
 }
-
-

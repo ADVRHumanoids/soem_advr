@@ -25,7 +25,6 @@ extern "C" {
 
 
 #include "utils.h"
-//#include "ec_slave_type.h"
 #include "slave_wrapper.h"
 
 
@@ -37,9 +36,9 @@ namespace ecat {
 
 struct ec_timing_t {
 
-    int64_t     recv_dc_time;
-    int64_t     offset;
-    uint64_t    loop_time;
+    int64_t     recv_dc_time; ///< reception timestamp from 1-1-2000 (in [ns])
+    int64_t     offset;       ///< sleep time of the master until next "DC tick"
+    uint64_t    loop_time;    ///< actual measure of the DC period
 
 };
 
@@ -49,11 +48,11 @@ typedef std::map<int, ESCPtr>  SlavesMap;
 
 /**
  *
- * @param ifname
- * @param ecat_cycle_ns
- * @param ecat_cycle_shift_ns
+ * \param ifname
+ * \param ecat_cycle_ns desired period of the DC (in nanoseconds)
+ * \param ecat_cycle_shift_ns initial delay before using DC (in nanoseconds)
  *
- * @return int expectedWKC
+ * \return int expectedWKC
  */
 int initialize(
         const char* ifname,
