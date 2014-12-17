@@ -97,12 +97,11 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    expected_wkc = initialize(argv[1], &sync_cycle_time_ns, &sync_cycle_offset_ns);
-
-    if ( expected_wkc < 0) {
+    if ( initialize(argv[1]) <= 0) {
         finalize();
         return 0;
     }
+
 
     int slave_pos = atoi(argv[2]);
     int password  = strtol(argv[4], 0, 16);
@@ -117,7 +116,8 @@ int main(int argc, char **argv)
     finalize();
 
 
-    expected_wkc = initialize(argv[1], &sync_cycle_time_ns, &sync_cycle_offset_ns);
+    initialize(argv[1]);
+    expected_wkc = operational(&sync_cycle_time_ns, &sync_cycle_offset_ns);
     finalize();
 
     return 0;

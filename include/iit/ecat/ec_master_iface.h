@@ -49,13 +49,18 @@ typedef std::map<int, ESCPtr>  SlavesMap;
 /**
  *
  * \param ifname
+ *
+ * \return int ec_slavexount
+ */
+int initialize(const char* ifname);
+/**
+ *
  * \param ecat_cycle_ns desired period of the DC (in nanoseconds)
  * \param ecat_cycle_shift_ns initial delay before using DC (in nanoseconds)
  *
  * \return int expectedWKC
  */
-int initialize(
-        const char* ifname,
+int operational(
         const uint64_t* ecat_cycle_ns,
         const uint64_t* ecat_cycle_shift_ns);
 

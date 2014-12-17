@@ -24,6 +24,7 @@
 
 #include <iit/ecat/ec_master_iface.h>
 
+#define T_OUT_MUL   1
 /**
  * 
  */
@@ -189,7 +190,7 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
     ec_slave[slave].state = req_state;
     ec_writestate(slave);
     // just check req_state ... no error indication bit is check
-    act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 5); 
+    act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * T_OUT_MUL); 
 
     if ( req_state != act_state ) {
         // not all slave reached requested state ... find who and check error indication bit
@@ -202,15 +203,15 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
                     DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                             i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
                     //if ( ec_slave[i].state & ec_error_mask ) {
-                        // attemping to ack
-                        ec_slave[i].state = (req_state & ec_state_mask) + EC_STATE_ACK;
-                        ec_writestate(i);
-                        act_state = ec_statecheck(i, req_state,  EC_TIMEOUTSTATE * 5); 
-                        if ( req_state != act_state ) {
-                            // still req_state not reached ...
-                            DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
-                                    i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
-                        }
+                    // attemping to ack
+                    ec_slave[i].state = (req_state & ec_state_mask) + EC_STATE_ACK;
+                    ec_writestate(i);
+                    act_state = ec_statecheck(i, req_state,  EC_TIMEOUTSTATE * T_OUT_MUL); 
+                    if ( req_state != act_state ) {
+                        // still req_state not reached ...
+                        DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
+                                i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
+                    }
                     //}
                 }
             }
@@ -218,15 +219,15 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
             DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                     slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
             //if ( ec_slave[slave].state & ec_error_mask ) {
-                // attemping to ack
-                ec_slave[slave].state = (req_state & ec_state_mask) + EC_STATE_ACK;
-                ec_writestate(slave);
-                act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 5); 
-                if ( req_state != act_state ) {
-                    // still req_state not reached ...
-                    DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
-                            slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
-                }
+            // attemping to ack
+            ec_slave[slave].state = (req_state & ec_state_mask) + EC_STATE_ACK;
+            ec_writestate(slave);
+            act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * T_OUT_MUL); 
+            if ( req_state != act_state ) {
+                // still req_state not reached ...
+                DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
+                        slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
+            }
             //}
         }
 
@@ -240,17 +241,11 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
  * @author amargan (3/31/2014)
  * 
  * @param ifname 
- * @param ecat_cycle_ns 
- * @param ecat_cycle_shift_ns 
  * 
- * @return int expectedWKC
+ * @return int ec_slavecount
  */
-int iit::ecat::initialize(
-                         const char* ifname,
-                         const uint64_t* ecat_cycle_ns,
-                         const uint64_t* ecat_cycle_shift_ns)
+int iit::ecat::initialize(const char* ifname)
 {
-
 
     DPRINTF("[ECat_master] Using %s\n", ifname);
     if ( ! ec_init((char*)ifname) ) {
@@ -261,14 +256,32 @@ int iit::ecat::initialize(
     // retunr workcounter of slave discover datagram = number of slaves found
     ec_config(FALSE, &IOmap);
 
+
     DPRINTF("[ECat_master] %d EtherCAT slaves identified.\n", ec_slavecount);
     if ( ec_slavecount < 1 ) {
         DPRINTF("[ECat_master] Failed to identify any slaves! Failing to init.\n");
         return 0;
     }
 
+    //req_state_check(0, EC_STATE_PRE_OP);
 
-    req_state_check(0, EC_STATE_PRE_OP);
+    return ec_slavecount;
+}
+
+/**
+ * 
+ * 
+ * @author amargan (3/31/2014)
+ * 
+ * @param ecat_cycle_ns 
+ * @param ecat_cycle_shift_ns 
+ * 
+ * @return int expectedWKC
+ */
+int iit::ecat::operational(const uint64_t* ecat_cycle_ns, 
+                           const uint64_t* ecat_cycle_shift_ns)
+{
+    struct timespec sleep_time;
 
     if ( ! ec_configdc() ) {
         DPRINTF("[ECat_master] Failed to config DC\n");
@@ -285,6 +298,9 @@ int iit::ecat::initialize(
 
     req_state_check(0, EC_STATE_SAFE_OP);
 
+    sleep_time = { 0, 50000000};
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
+
     if ( ! req_state_check(0, EC_STATE_OPERATIONAL) ) {
         // exit .. otherwise with stuck in next loop
         // !! if the bootloader is running the only allowed state are INIT and BOOT
@@ -292,7 +308,7 @@ int iit::ecat::initialize(
     }
 
     // We are now in OP ...
-
+    sleep_time = { 0, 1000};
     if ( *ecat_cycle_ns > 0 ) {
         // Update ec_DCtime so we can calculate stop time below.
         ecat_cycle();
@@ -301,6 +317,7 @@ int iit::ecat::initialize(
         // SOEM automatically updates ec_DCtime.
         while ( ec_DCtime < stoptime ) {
             ecat_cycle();
+            clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
         }
     }
     // We now have data.
@@ -326,6 +343,7 @@ int iit::ecat::initialize(
 
 void iit::ecat::finalize(void) {
 
+
     DPRINTF("[ECat_master] Stop ecat_thread\n");
     ecat_thread_run = 0;
     pthread_join(ecat_thread_id, NULL);
@@ -337,6 +355,10 @@ void iit::ecat::finalize(void) {
     }
 
     req_state_check(0, EC_STATE_INIT);
+
+    DPRINTF("[ECat_master] POWER OFF slaves.\n");
+    uint16_t power_on_gpio = 0;
+    ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTRET3);
 
     ec_close();
     DPRINTF("[ECat_master] close\n");
