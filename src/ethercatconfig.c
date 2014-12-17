@@ -147,6 +147,11 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
    uint32 eedat;
    int wkc, cindex, nSM, lp;
 
+   uint16_t power_on_gpio = 1;
+   uint16_t power_in_gpio = 0;
+   uint8_t try_cnt = 3;
+
+
    EC_PRINT("ec_config_init %d\n",usetable);
    *(context->slavecount) = 0;
    /* clean ec_slave array */
@@ -168,6 +173,28 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
    ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
    /* netX100 should now be happy */
    
+   ///
+   /// Walkman HiPower Motor Controller dsp is powered on by et1000
+   /// 
+   ///  
+#if 1
+   ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTRET3);
+   while ( try_cnt-- ) {
+       ec_BRD(0x0000, 0x0f18, sizeof(power_in_gpio), &power_in_gpio, EC_TIMEOUTRET3);
+       if ( power_in_gpio ) {
+           break;
+       }
+   }
+   if ( power_in_gpio == 0 ) {
+       EC_PRINT("[ECat_master] Failed to POWER ON slaves! Failing to init.\n");
+       return 0;
+   }
+   osal_usleep(500000);
+   EC_PRINT("[ECat_master] POWER ON slaves.\n");
+#endif
+   ///
+   ///
+
    wkc = ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
    printf("wkc = %d\n",wkc);
    
