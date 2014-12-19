@@ -174,7 +174,7 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
    /* netX100 should now be happy */
    
    ///
-   /// Walkman HiPower Motor Controller dsp is powered on by et1000
+   /// Walkman HiPower Motor Controller dsp is powered on by et1100
    /// 
    ///  
 #if 1
@@ -186,8 +186,8 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
        }
    }
    if ( power_in_gpio == 0 ) {
-       EC_PRINT("[ECat_master] Failed to POWER ON slaves! Failing to init.\n");
-       return 0;
+       EC_PRINT("[ECat_master] Failed to POWER ON C2000 slaves!\n");
+       //return 0;
    }
    osal_usleep(500000);
    EC_PRINT("[ECat_master] POWER ON slaves.\n");

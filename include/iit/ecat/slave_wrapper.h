@@ -19,7 +19,6 @@
 #include <soem-1.3.0/ethercatprint.h>
 
 
-
 namespace iit {
 namespace ecat {
 
