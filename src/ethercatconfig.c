@@ -196,7 +196,7 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
    ///
 
    wkc = ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
-   printf("wkc = %d\n",wkc);
+   //printf("wkc = %d\n",wkc);
    
    w = 0x0000;
    wkc = ecx_BRD(context->port, 0x0000, ECT_REG_TYPE, sizeof(w), &w, EC_TIMEOUTSAFE);   /* detect number of slaves */

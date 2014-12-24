@@ -339,7 +339,13 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
 
 }
 
+void iit::ecat::power_off() {
 
+    DPRINTF("[ECat_master] POWER OFF slaves.\n");
+    uint16_t power_on_gpio = 0;
+    ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTRET3);
+
+}
 
 void iit::ecat::finalize(void) {
 
@@ -355,10 +361,6 @@ void iit::ecat::finalize(void) {
     }
 
     req_state_check(0, EC_STATE_INIT);
-
-    DPRINTF("[ECat_master] POWER OFF slaves.\n");
-    uint16_t power_on_gpio = 0;
-    ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTRET3);
 
     ec_close();
     DPRINTF("[ECat_master] close\n");

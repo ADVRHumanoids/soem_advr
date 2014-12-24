@@ -77,6 +77,8 @@ int send_to_slaves(void);
 
 int update_slave_firmware(uint16_t slave, std::string firmware, uint32_t passwd_firm);
  
+void power_off(void);
+ 
 }
 }
 
