@@ -56,6 +56,16 @@
 #include "ethercatmain.h"
 #include "ethercatfoe.h"
 
+// define if debug printf is needed
+#define EC_DEBUG
+
+#ifdef EC_DEBUG
+#define EC_PRINT printf
+#else
+#define EC_PRINT(...) do {} while (0)
+#endif
+
+
 #define EC_MAXFOEDATA 512
 
 /** FOE structure.
@@ -282,7 +292,8 @@ int ecx_FOEwrite(ecx_contextt *context, uint16 slave, char *filename, uint32 pas
          wkc = ecx_mbxreceive(context, slave, (ec_mbxbuft *)&MbxIn, timeout);
          if (wkc > 0) /* succeeded to read slave response ? */
          {
-            /* slave response should be FoE */
+            EC_PRINT("ecx_FOEwrite op code %d pckt_n %d \n",aFOEp->OpCode, etohl(aFOEp->PacketNumber));
+             /* slave response should be FoE */
             if ((aFOEp->MbxHeader.mbxtype & 0x0f) == ECT_MBXT_FOE)
             {
                switch (aFOEp->OpCode)
@@ -336,6 +347,7 @@ int ecx_FOEwrite(ecx_contextt *context, uint16 slave, char *filename, uint32 pas
                      else
                      {
                         /* FoE error */
+                        EC_PRINT("ecx_FOEwrite %d %d\n", packetnumber ,sendpacket);
                         wkc = -EC_ERR_TYPE_FOE_PACKETNUMBER;
                      }
                      break;

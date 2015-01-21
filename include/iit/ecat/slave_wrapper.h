@@ -34,9 +34,12 @@ public:
     virtual void writePDO() = 0;
     const uint8_t* getRawData() const;
 
+    const uint16_t get_configadr() { return configadr; }
+         
 protected:
     uint16_t alias;
     uint16_t position;
+    uint16_t configadr;
     uint32_t vendor_id;
     uint32_t product_code;
 
@@ -51,11 +54,15 @@ protected:
 
 
 template<class ESCTypes>
+//template<class ESCTypes, class ESCParamTypes>
 class BasicEscWrapper : public EscWrapper
 {
 public:
-    typedef typename ESCTypes::pdo_rx pdo_rx_t;
-    typedef typename ESCTypes::pdo_tx pdo_tx_t;
+    typedef typename ESCTypes::pdo_rx           pdo_rx_t;
+    typedef typename ESCTypes::pdo_tx           pdo_tx_t;
+    //typedef typename ESCParamTypes::flashParam  flash_param_t;
+    //typedef typename ESCParamTypes::ramParam    ram_param_t;
+
 public:
     BasicEscWrapper(const ec_slavet& slave_descriptor) :
         EscWrapper(slave_descriptor)
@@ -68,7 +75,23 @@ public:
     const pdo_tx_t& getTxPDO() const;
 
     void setTxPDO(const pdo_tx_t&);
+/*
+    void init(void);
 
+    flash_param_t& getFlashParam() const;
+    ram_param_t&   getRamParam() const;
+
+    int set_SDO_byname(const char * name);
+    int get_SDO_byname(const char * name);
+
+    virtual const objd_t * get_SDOs() = 0;
+
+protected:
+    static flash_param_t flash_param;
+    static ram_param_t   ram_param;
+
+    std::map<std::string, const objd_t*> sdo_look_up;
+*/
 protected:
     pdo_rx_t rx_pdo;
     pdo_tx_t tx_pdo;
@@ -106,6 +129,42 @@ SIGNATURE(void)::setTxPDO(const pdo_tx_t& tx)
     tx_pdo = tx;
 }
 
+/*
+SIGNATURE(void)::init(void) {
+
+    const objd_t * sdo = get_SDOs();
+    while ( sdo && sdo->index ) {
+        sdo_look_up[sdo->name] = sdo;
+        get_SDO(position, sdo);
+        sdo ++;
+    }
+}
+
+SIGNATURE(typename CLASS::flash_param_t&)::getFlashParam() const
+{
+    return flash_param;
+}
+
+SIGNATURE(typename CLASS::ram_param_t&)::getRamParam() const
+{
+    return ram_param;
+}
+
+SIGNATURE(int)::set_SDO_byname(const char * name) {
+
+    // look up name in SDOs
+    const objd_t * sdo = sdo_look_up[name];
+    return set_SDO(position, sdo);
+}
+
+SIGNATURE(int)::get_SDO_byname(const char * name) {
+
+    // look up name in SDOs
+    const objd_t * sdo = sdo_look_up[name];
+    return get_SDO(position, sdo);
+}
+ 
+*/
 
 #undef SIGNATURE
 #undef CLASS

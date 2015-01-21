@@ -69,13 +69,15 @@ int operational(
  */
 void finalize(void);
 
+bool req_state_check(uint16 slave, uint16_t req_state);
+
 int setExpectedSlaves(const SlavesMap& expectedSlaves);
 
 int recv_from_slaves(ec_timing_t *);
 
 int send_to_slaves(void);
 
-int update_slave_firmware(uint16_t slave, std::string firmware, uint32_t passwd_firm);
+int send_file(uint16_t slave, std::string filename, uint32_t passwd_firm);
  
 void power_off(void);
  

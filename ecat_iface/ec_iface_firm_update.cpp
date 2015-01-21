@@ -108,9 +108,19 @@ int main(int argc, char **argv)
 
     DPRINTF("%d %s 0x%04X\n", slave_pos, argv[3], password);
     // ask all slaves to go in INIT before update one
-    update_slave_firmware(slave_pos, argv[3], password);
-    //update_slave_firmware(2, "valves_board", 0xB002);
-    //update_slave_firmware(3, "hub_board.bin", 0xB001);
+    req_state_check(0, EC_STATE_INIT);
+    // first boot state request is handled by application that jump to bootloader
+    // we do NOT have a state change in the slave
+    req_state_check(slave_pos, EC_STATE_BOOT);
+    // second boot state request is handled by bootloader
+    // now the slave should go in BOOT state
+    if ( ! req_state_check(slave_pos, EC_STATE_BOOT) ) {
+        DPRINTF("Slave %d not changed to BOOT state.\n", slave_pos);
+        return 0;
+    }
+
+    send_file(slave_pos, argv[3], password);
+
         
     sleep(1);
     finalize();

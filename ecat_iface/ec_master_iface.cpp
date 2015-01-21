@@ -175,7 +175,7 @@ static void start_ecat_thread(const uint64_t* cycle_time_ns) {
 
 }
 
-bool req_state_check(uint16 slave, uint16_t req_state) {
+bool iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
 
     uint16_t act_state;
     uint16_t ec_error_mask = 0x10;
@@ -263,7 +263,7 @@ int iit::ecat::initialize(const char* ifname)
         return 0;
     }
 
-    //req_state_check(0, EC_STATE_PRE_OP);
+    req_state_check(0, EC_STATE_PRE_OP);
 
     return ec_slavecount;
 }
@@ -430,32 +430,22 @@ int iit::ecat::send_to_slaves(void) {
 
 }
 
-int iit::ecat::update_slave_firmware(uint16_t slave, std::string firmware, uint32_t passwd_firm) {
+//int iit::ecat::update_slave_firmware(uint16_t slave, std::string firmware, uint32_t passwd_firm) {
+int iit::ecat::send_file(uint16_t slave, std::string filename, uint32_t passwd_firm) {
 
-    req_state_check(0, EC_STATE_INIT);
+    int result;
 
-    // first boot state request is handled by application that jump to bootloader
-    // we do NOT have a state change in the slave
-    req_state_check(slave, EC_STATE_BOOT);
+    std::ifstream file_stream(filename);
+    std::string file_buff((std::istreambuf_iterator<char>(file_stream)), std::istreambuf_iterator<char>());
 
-    // second boot state request is handled by bootloader
-    // now the slave should go in BOOT state
-    if ( ! req_state_check(slave, EC_STATE_BOOT) ) {
-        DPRINTF("Slave %d not changed to BOOT state.\n", slave);
-        return 0;
-    }
-
-    std::ifstream firm(firmware);
-    std::string firm_buff((std::istreambuf_iterator<char>(firm)), std::istreambuf_iterator<char>());
-
-    DPRINTF("File read OK, %d bytes.\n",firm_buff.length());
+    DPRINTF("File read OK, %d bytes.\n",file_buff.length());
     DPRINTF("Update ....\n");
-    int result = ec_FOEwrite(slave, (char*)firmware.c_str(), passwd_firm, firm_buff.length() ,(void*)firm_buff.c_str(), EC_TIMEOUTSTATE);
-    if ( result < 0 )
+    result = ec_FOEwrite(slave, (char*)filename.c_str(), passwd_firm, file_buff.length() ,(void*)file_buff.c_str(), EC_TIMEOUTSTATE*10);
+    if ( result <= 0 ) {
+        char * err =  ec_elist2string();
+        DPRINTF("Ec_error : %s\n", err);
         DPRINTF("Fail with code %d\n", result);
-
-    //INIT state request is handled by bootloader that jump to application that start from INIT
-    req_state_check(slave, EC_STATE_INIT);
+    }
 
     return result;
 }

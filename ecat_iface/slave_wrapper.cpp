@@ -15,9 +15,8 @@ using namespace iit;
 ecat::EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
 {
     ec_slavet _slave_arg = slave_descriptor;
-    DPRINTF(">> factory %x id %d conf_addr %x rev %d alias %d\n",_slave_arg.eep_man, _slave_arg.eep_id, _slave_arg.configadr & 0x0f, _slave_arg.eep_rev, _slave_arg.aliasadr);
-    DPRINTF("   Ibytes %d Obytes %d\n", _slave_arg.Ibytes, _slave_arg.Obytes);
 
+    configadr =     slave_descriptor.configadr;
     position =      slave_descriptor.configadr & 0x0f;
     vendor_id =     slave_descriptor.eep_man;
     product_code =  slave_descriptor.eep_id;
@@ -26,5 +25,14 @@ ecat::EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
     nbytes_in  = slave_descriptor.Ibytes;
     outputs    = slave_descriptor.outputs;
     nbytes_out = slave_descriptor.Obytes;
+
+    DPRINTF(">> factory %x id %d : conf_addr %x pos %d rev %d alias %d\n",
+            vendor_id,
+            product_code,
+            configadr,
+            position,
+            _slave_arg.eep_rev,
+            _slave_arg.aliasadr);
+    DPRINTF("   Ibytes %d Obytes %d\n", nbytes_in, nbytes_out);
 
 }
