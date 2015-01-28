@@ -189,7 +189,7 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
        EC_PRINT("[ECat_master] Failed to POWER ON C2000 slaves!\n");
        //return 0;
    }
-   osal_usleep(500000);
+   osal_usleep(3000000);
    EC_PRINT("[ECat_master] POWER ON slaves.\n");
 #endif
    ///
