@@ -308,16 +308,19 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
     }
 
     // We are now in OP ...
-    sleep_time = { 0, 1000};
+    sleep_time = { 0, 50000};
     if ( *ecat_cycle_ns > 0 ) {
         // Update ec_DCtime so we can calculate stop time below.
         ecat_cycle();
         // Send a barrage of packets to set up the DC clock.
         int64_t stoptime = ec_DCtime + *ecat_cycle_shift_ns/2;
         // SOEM automatically updates ec_DCtime.
+        //DPRINTF("[ECat_master] warm up\n");
         while ( ec_DCtime < stoptime ) {
             ecat_cycle();
             clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
+            //DPRINTF("[ECat_master] ec_DCtime %ld %ld\n", ec_DCtime, stoptime);
+
         }
     }
     // We now have data.

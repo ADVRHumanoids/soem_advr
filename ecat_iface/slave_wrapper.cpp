@@ -7,12 +7,21 @@
 
 #include <string.h>
 
-#include <iit/ecat/utils.h>
 #include <iit/ecat/slave_wrapper.h>
 
-using namespace iit;
+using namespace iit::ecat;
 
-ecat::EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
+//typename TestESCtemp<class EscPDOTypes, class EscSDOTypes>::sdo_t    TestESCtemp<ESCParamTypes>::flash_param;
+//template<class EscPDOTypes, class EscSDOTypes>
+
+//#define TEMPL template<class EscPDOTypes, class EscSDOTypes>
+//#define CLASS BasicEscWrapper<EscPDOTypes,EscSDOTypes>
+//TEMPL
+//typename CLASS::sdo_t CLASS::sdo;
+//#undef TEMPL
+//#undef CLASS
+
+EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
 {
     ec_slavet _slave_arg = slave_descriptor;
 
@@ -36,3 +45,5 @@ ecat::EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
     DPRINTF("   Ibytes %d Obytes %d\n", nbytes_in, nbytes_out);
 
 }
+
+

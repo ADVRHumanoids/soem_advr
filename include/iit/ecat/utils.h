@@ -11,6 +11,7 @@
     #define DPRINTF printf
 #endif
 
+#include <fstream>
 #include <sstream>
 #include <boost/format.hpp>
 #include <boost/circular_buffer.hpp>
@@ -53,6 +54,23 @@ inline void print_stat(stat_t &s) {
     }
     DPRINTF("%s", oss.str().c_str());
 }
+
+
+template <typename T>
+inline void dump_buffer(std::string filename, T t) {
+
+    char buffer[1024];
+    std::ofstream log_file(filename.c_str());
+
+    for ( typename T::iterator it=t.begin(); it!=t.end(); it++ ) {
+        (*it).sprint(buffer, sizeof(buffer));
+        log_file << std::string(buffer);
+    }
+    log_file << std::flush;
+    log_file.close();
+
+}
+
 
 #define NSEC_PER_SEC	1000000000ULL
 
