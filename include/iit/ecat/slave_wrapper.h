@@ -98,57 +98,6 @@ inline int check_datatype(int datatype, T t) {
 
 }
 
-inline int set_SDO(int slave_pos, const objd_t *sdo) {
-
-    char * err;
-    ec_errort   ec_error;
-    int final_size, wkc;
-
-    if (!sdo) { return 0; }
-
-    //DPRINTF("set_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, slave_pos, sdo->index, sdo->subindex);
-    final_size = sdo->bitlength/8;
-    wkc = ec_SDOwrite(slave_pos, sdo->index, sdo->subindex, false, final_size, sdo->data, EC_TIMEOUTRXM);
-    if ( wkc <= 0 || final_size!=sdo->bitlength/8 ) {
-        DPRINTF("Slave %d >> ", slave_pos);
-        if ( wkc <= 0 ) {
-            err =  ec_elist2string();
-            DPRINTF("Ec_error : %s\n", err);
-        } else {
-            DPRINTF("SDO write fail : %d != %d\n", final_size, sdo->bitlength/8);
-        }
-    } else {
-        // OK ....
-    }
-    return wkc; 
-}
-
-inline int get_SDO(int slave_pos, const objd_t *sdo) {
-
-    char * err;
-    ec_errort   ec_error;
-    int final_size, wkc;
-
-    if (!sdo) { return 0; }
-
-    //DPRINTF("get_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, slave_pos, sdo->index, sdo->subindex);
-    final_size = sdo->bitlength/8;
-    wkc = ec_SDOread(slave_pos, sdo->index, sdo->subindex, false, &final_size, sdo->data, EC_TIMEOUTRXM);
-    if ( wkc <= 0 || final_size!=sdo->bitlength/8 ) {
-        DPRINTF("Slave %d >> ", slave_pos);
-        if ( wkc <= 0 ) {
-            err =  ec_elist2string();
-            DPRINTF("Ec_error : %s\n", err);
-        } else {
-            DPRINTF("SDO read fail : %d != %d\n", final_size, sdo->bitlength/8);
-        }
-    } else {
-        // OK ....
-    }
-    return wkc; 
-}
-
-
 
 
 
@@ -198,19 +147,10 @@ public:
     BasicEscWrapper(const ec_slavet& slave_descriptor) :
         EscWrapper(slave_descriptor) {}
 
-    void readPDO(void);
-    void writePDO(void);
-    virtual void on_readPDO(void)   {}
-    virtual void on_writePDO(void)  {}
-
-    const pdo_rx_t& getRxPDO() const;
-    const pdo_tx_t& getTxPDO() const;
-
-    void setTxPDO(const pdo_tx_t&);
-
     void init_sdo_lookup(void);
 
     sdo_t& getSDO_ptr();
+    objd_t * getObjd_ptr(const char * name);
 
     template<typename T>
     int set_SDO_byname(const char * name, T t);
@@ -220,6 +160,18 @@ public:
     int get_SDO_byname(const char * name, T &t);
     int get_SDO_byname(const char * name);
 
+    const pdo_rx_t& getRxPDO() const;
+    const pdo_tx_t& getTxPDO() const;
+
+    void setTxPDO(const pdo_tx_t&);
+
+protected:
+
+    // callbacks
+    virtual void on_readPDO(void)       {}
+    virtual void on_writePDO(void)      {}
+    virtual void on_setSDO(const objd_t * sdo)    {}
+    virtual void on_getSDO(const objd_t * sdo)    {}
 
 protected:
 
@@ -230,6 +182,13 @@ protected:
 
     std::map<std::string, const objd_t*> sdo_look_up;
 
+private:
+
+    void readPDO(void);
+    void writePDO(void);
+
+    int set_SDO(int slave_pos, const objd_t *sdo);
+    int get_SDO(int slave_pos, const objd_t *sdo);
 };
 
 
@@ -280,6 +239,10 @@ SIGNATURE(typename CLASS::sdo_t&)::getSDO_ptr() {
     return sdo;
 }
 
+SIGNATURE(objd_t *)::getObjd_ptr(const char * name) {
+    return sdo_look_up[name];
+}
+
 SIGNATURE(int)::set_SDO_byname(const char * name) {
 
     // look up name in SDOs
@@ -291,14 +254,6 @@ SIGNATURE(int)::set_SDO_byname(const char * name) {
     return set_SDO(position, sdo);
 }
 
-SIGNATURE(int)::get_SDO_byname(const char * name) {
-
-    // look up name in SDOs
-    const objd_t * sdo = sdo_look_up[name];
-    return get_SDO(position, sdo);
-}
-
- 
 TEMPL
 template<typename T>
 inline int CLASS::set_SDO_byname(const char * name, T t) {
@@ -318,6 +273,13 @@ inline int CLASS::set_SDO_byname(const char * name, T t) {
     return set_SDO(position, sdo); 
 }
 
+SIGNATURE(int)::get_SDO_byname(const char * name) {
+
+    // look up name in SDOs
+    const objd_t * sdo = sdo_look_up[name];
+    return get_SDO(position, sdo);
+}
+
 TEMPL
 template<typename T>
 inline int CLASS::get_SDO_byname(const char * name, T &t) {
@@ -333,6 +295,61 @@ inline int CLASS::get_SDO_byname(const char * name, T &t) {
     ret = get_SDO(position, sdo);
     t = *((T*)sdo->data);
     return ret;  
+}
+
+SIGNATURE(int)::set_SDO(int slave_pos, const objd_t *sdo) {
+
+    char * err;
+    ec_errort   ec_error;
+    int final_size, wkc;
+
+    if (!sdo) { return 0; }
+
+    on_setSDO(sdo);
+
+    //DPRINTF("set_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, slave_pos, sdo->index, sdo->subindex);
+    final_size = sdo->bitlength/8;
+    wkc = ec_SDOwrite(slave_pos, sdo->index, sdo->subindex, false, final_size, sdo->data, EC_TIMEOUTRXM);
+    if ( wkc <= 0 || final_size!=sdo->bitlength/8 ) {
+        DPRINTF("Slave %d >> ", slave_pos);
+        if ( wkc <= 0 ) {
+            err =  ec_elist2string();
+            DPRINTF("Ec_error : %s\n", err);
+        } else {
+            DPRINTF("SDO write fail : %d != %d\n", final_size, sdo->bitlength/8);
+        }
+    } else {
+        // OK ....
+    }
+    return wkc; 
+}
+
+SIGNATURE(int)::get_SDO(int slave_pos, const objd_t *sdo) {
+
+    char * err;
+    ec_errort   ec_error;
+    int final_size, wkc;
+
+    if (!sdo) { return 0; }
+
+    //DPRINTF("get_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, slave_pos, sdo->index, sdo->subindex);
+    final_size = sdo->bitlength/8;
+    wkc = ec_SDOread(slave_pos, sdo->index, sdo->subindex, false, &final_size, sdo->data, EC_TIMEOUTRXM);
+    if ( wkc <= 0 || final_size!=sdo->bitlength/8 ) {
+        DPRINTF("Slave %d >> ", slave_pos);
+        if ( wkc <= 0 ) {
+            err =  ec_elist2string();
+            DPRINTF("Ec_error : %s\n", err);
+        } else {
+            DPRINTF("SDO read fail : %d != %d\n", final_size, sdo->bitlength/8);
+        }
+    } else {
+        // OK ....
+    }
+
+    on_getSDO(sdo);
+
+    return wkc; 
 }
 
 

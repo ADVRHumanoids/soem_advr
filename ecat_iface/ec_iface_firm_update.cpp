@@ -114,7 +114,7 @@ int main(int argc, char **argv)
     req_state_check(slave_pos, EC_STATE_BOOT);
     // second boot state request is handled by bootloader
     // now the slave should go in BOOT state
-    if ( ! req_state_check(slave_pos, EC_STATE_BOOT) ) {
+    if ( req_state_check(slave_pos, EC_STATE_BOOT) !=  EC_STATE_BOOT) {
         DPRINTF("Slave %d not changed to BOOT state.\n", slave_pos);
         return 0;
     }

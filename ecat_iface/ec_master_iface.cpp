@@ -175,7 +175,7 @@ static void start_ecat_thread(const uint64_t* cycle_time_ns) {
 
 }
 
-bool iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
+int iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
 
     uint16_t act_state;
     uint16_t ec_error_mask = 0x10;
@@ -233,7 +233,7 @@ bool iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
 
     }
 
-    return(act_state == req_state);
+    return act_state;
 }
 /**
  * 
@@ -301,7 +301,7 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
     sleep_time = { 0, 50000000};
     clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
 
-    if ( ! req_state_check(0, EC_STATE_OPERATIONAL) ) {
+    if ( req_state_check(0, EC_STATE_OPERATIONAL) != EC_STATE_OPERATIONAL ) {
         // exit .. otherwise with stuck in next loop
         // !! if the bootloader is running the only allowed state are INIT and BOOT
         return 0;

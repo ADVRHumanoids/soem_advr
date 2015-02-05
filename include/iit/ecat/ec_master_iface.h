@@ -69,7 +69,8 @@ int operational(
  */
 void finalize(void);
 
-bool req_state_check(uint16 slave, uint16_t req_state);
+// return actual state
+int req_state_check(uint16 slave, uint16_t req_state);
 
 int setExpectedSlaves(const SlavesMap& expectedSlaves);
 
