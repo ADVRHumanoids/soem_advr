@@ -20,6 +20,7 @@
 
 #include <string>
 #include <map>
+#include <exception>
 
 #include <iit/ecat/utils.h>
 
@@ -42,8 +43,21 @@
 namespace iit {
 namespace ecat {
 
-typedef struct
-{
+/* Possible error codes returned */
+enum ec_wrp_err: int {
+    /* No error */
+    EC_WRP_OK         = 0,
+    /* Function failed. */
+    EC_WRP_NOK,
+    EC_WRP_SDO_RO,
+    EC_WRP_SDO_MISMATCH,
+    EC_WRP_SDO_NOTEXIST,
+    EC_WRP_SDO_SET_FAIL,
+    EC_WRP_SDO_GET_FAIL,
+    EC_WRP_SDO_GET_CB_FAIL,
+};
+
+typedef struct {
     int index;
     int subindex;
     int datatype;
@@ -56,49 +70,80 @@ typedef struct
 template <typename T>
 inline int check_datatype(int datatype, T t) {
 
-    switch (datatype) {
+    switch ( datatype ) {
         case DTYPE_INTEGER8:
-            if (typeid(T) != typeid(int8_t))    { return 0; }
+            if ( typeid(T) != typeid(int8_t) ) {
+                return 0;
+            }
             break;
         case DTYPE_INTEGER16:
-            if (typeid(T) != typeid(int16_t))   { return 0; }
+            if ( typeid(T) != typeid(int16_t) ) {
+                return 0;
+            }
             break;
         case DTYPE_INTEGER32:
-            if (typeid(T) != typeid(int32_t))   { return 0; }
+            if ( typeid(T) != typeid(int32_t) ) {
+                return 0;
+            }
             break;
         case DTYPE_INTEGER64:
-            if (typeid(T) != typeid(int64_t))   { return 0; }
+            if ( typeid(T) != typeid(int64_t) ) {
+                return 0;
+            }
             break;
         case DTYPE_UNSIGNED8:
-            if (typeid(T) != typeid(uint8_t))   { return 0; }
+            if ( typeid(T) != typeid(uint8_t) ) {
+                return 0;
+            }
             break;
         case DTYPE_UNSIGNED16:
-            if (typeid(T) != typeid(uint16_t))  { return 0; }
+            if ( typeid(T) != typeid(uint16_t) ) {
+                return 0;
+            }
             break;
         case DTYPE_UNSIGNED32:
-            if (typeid(T) != typeid(uint32_t))  { return 0; }
+            if ( typeid(T) != typeid(uint32_t) ) {
+                return 0;
+            }
             break;
         case DTYPE_UNSIGNED64:
-            if (typeid(T) != typeid(uint64_t))  { return 0; }
+            if ( typeid(T) != typeid(uint64_t) ) {
+                return 0;
+            }
             break;
         case DTYPE_REAL32:
-            if (typeid(T) != typeid(float))     { return 0; }
+            if ( typeid(T) != typeid(float) ) {
+                return 0;
+            }
             break;
         case DTYPE_REAL64:
-            if (typeid(T) != typeid(double))    { return 0; }
+            if ( typeid(T) != typeid(double) ) {
+                return 0;
+            }
             break;
         case DTYPE_VISIBLE_STRING:
-            if (typeid(T) != typeid(char*))     { return 0; }
+            if ( typeid(T) != typeid(char*) ) {
+                return 0;
+            }
             break;
         default:
-            return 0;
+            return EC_WRP_NOK;
     }
 
-    return datatype;
+    return EC_WRP_OK;
 
 }
 
 
+class EscError : public std::runtime_error {
+public:
+    EscError (int err_no, const std::string& what_arg) :
+        std::runtime_error(what_arg) { error_num = err_no; }
+    EscError (int err_no, const char* what_arg):
+        std::runtime_error(what_arg) { error_num = err_no; }
+private:
+    int error_num;
+};
 
 
 class EscWrapper {
@@ -115,8 +160,8 @@ public:
 
     const uint8_t* getRawData() const;
 
-    const uint16_t get_configadr() { return configadr; }
-         
+    const uint16_t get_configadr() { return configadr;}
+
 protected:
     uint16_t alias;
     uint16_t position;
@@ -135,8 +180,7 @@ protected:
 
 
 template<class EscPDOTypes, class EscSDOTypes>
-class BasicEscWrapper : public EscWrapper
-{
+class BasicEscWrapper : public EscWrapper {
 
 public:
     typedef typename EscPDOTypes::pdo_rx    pdo_rx_t;
@@ -145,7 +189,7 @@ public:
 
 public:
     BasicEscWrapper(const ec_slavet& slave_descriptor) :
-        EscWrapper(slave_descriptor) {}
+    EscWrapper(slave_descriptor) {}
 
     void init_sdo_lookup(void);
 
@@ -170,8 +214,8 @@ protected:
     // callbacks
     virtual void on_readPDO(void)       {}
     virtual void on_writePDO(void)      {}
-    virtual void on_setSDO(const objd_t * sdo)    {}
-    virtual void on_getSDO(const objd_t * sdo)    {}
+    virtual int on_setSDO(const objd_t * sdo)    { return EC_WRP_OK;}
+    virtual int on_getSDO(const objd_t * sdo)    { return EC_WRP_OK;}
 
 protected:
 
@@ -240,18 +284,33 @@ SIGNATURE(typename CLASS::sdo_t&)::getSDO_ptr() {
 }
 
 SIGNATURE(objd_t *)::getObjd_ptr(const char * name) {
-    return sdo_look_up[name];
+    objd_t * sdo;
+    try {
+        sdo = sdo_look_up.at(name);
+    } catch ( const std::out_of_range& oor ) {
+        return 0;
+    }
+    return sdo;
 }
 
 SIGNATURE(int)::set_SDO_byname(const char * name) {
 
     // look up name in SDOs
-    const objd_t * sdo = sdo_look_up[name];
-    if (sdo->access == ATYPE_RO) {
-        DPRINTF("ERROR sdo obj is READ_ONLY %s\n", sdo->name);
-        return 0;
+    const objd_t * sdo;
+    try {
+        sdo = sdo_look_up.at(name);
+    } catch ( const std::out_of_range& oor ) {
+        throw EscError(EC_WRP_SDO_NOTEXIST, sdo->name);
     }
-    return set_SDO(position, sdo);
+    if ( sdo->access == ATYPE_RO ) {
+        DPRINTF("ERROR sdo obj is READ_ONLY %s\n", sdo->name);
+        throw EscError(EC_WRP_SDO_RO, sdo->name);
+    }
+    if ( set_SDO(position, sdo) != EC_WRP_OK ) {
+        throw EscError(EC_WRP_SDO_SET_FAIL, sdo->name);
+    }
+
+    return EC_WRP_OK;
 }
 
 TEMPL
@@ -259,42 +318,66 @@ template<typename T>
 inline int CLASS::set_SDO_byname(const char * name, T t) {
 
     // look up name in SDOs
-    const objd_t * sdo = sdo_look_up[name];
-    if (sdo->access == ATYPE_RO) {
-        DPRINTF("ERROR sdo obj is READ_ONLY %s\n", sdo->name);
-        return 0;
+    const objd_t * sdo;
+    try {
+        sdo = sdo_look_up.at(name);
+    } catch ( const std::out_of_range& oor ) {
+        throw EscError(EC_WRP_SDO_NOTEXIST, sdo->name);
     }
-    //DPRINTF("sdo datatype %s\n", typeid(T).name());
-    if ( !check_datatype(sdo->datatype, t) ) {
+    if ( sdo->access == ATYPE_RO ) {
+        DPRINTF("ERROR sdo obj is READ_ONLY %s\n", sdo->name);
+        throw EscError(EC_WRP_SDO_RO, sdo->name);
+    }
+    if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
         DPRINTF("ERROR set_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
-        return 0;
+        throw EscError(EC_WRP_SDO_MISMATCH, sdo->name);
     }
     *((T*)sdo->data) = t;
-    return set_SDO(position, sdo); 
+    if ( set_SDO(position, sdo) != EC_WRP_OK ) {
+        throw EscError(EC_WRP_SDO_SET_FAIL, sdo->name);
+    }
+
+    return EC_WRP_OK;
 }
 
 SIGNATURE(int)::get_SDO_byname(const char * name) {
 
     // look up name in SDOs
-    const objd_t * sdo = sdo_look_up[name];
-    return get_SDO(position, sdo);
+    const objd_t * sdo;
+    try {
+        sdo = sdo_look_up.at(name);
+    } catch ( const std::out_of_range& oor ) {
+        throw EscError(EC_WRP_SDO_NOTEXIST, sdo->name);
+    }
+    if ( get_SDO(position, sdo) != EC_WRP_OK) {
+        throw EscError(EC_WRP_SDO_GET_FAIL, sdo->name);
+    }
+
+    return EC_WRP_OK;
 }
 
 TEMPL
 template<typename T>
 inline int CLASS::get_SDO_byname(const char * name, T &t) {
 
-    int ret = 0;
+    int ret;
     // look up name in SDOs
-    const objd_t * sdo = sdo_look_up[name];
-    //DPRINTF("sdo datatype %s\n", typeid(T).name());
-    if ( !check_datatype(sdo->datatype, t) ) {
-        DPRINTF("ERROR get_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
-        return 0;
+    const objd_t * sdo;
+    try {
+        sdo = sdo_look_up.at(name);
+    } catch ( const std::out_of_range& oor ) {
+        throw EscError(EC_WRP_SDO_NOTEXIST, sdo->name);
     }
-    ret = get_SDO(position, sdo);
+    if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
+        DPRINTF("ERROR get_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
+        throw EscError(EC_WRP_SDO_MISMATCH, sdo->name);
+    }
+    if ( get_SDO(position, sdo) != EC_WRP_OK) {
+        throw EscError(EC_WRP_SDO_GET_FAIL, sdo->name);
+    }
     t = *((T*)sdo->data);
-    return ret;  
+
+    return EC_WRP_OK;  
 }
 
 SIGNATURE(int)::set_SDO(int slave_pos, const objd_t *sdo) {
@@ -303,14 +386,20 @@ SIGNATURE(int)::set_SDO(int slave_pos, const objd_t *sdo) {
     ec_errort   ec_error;
     int final_size, wkc;
 
-    if (!sdo) { return 0; }
+    if ( !sdo ) {
+        return 0;
+    }
 
-    on_setSDO(sdo);
+    if ( on_setSDO(sdo) != EC_WRP_OK ) {
+        return EC_WRP_SDO_GET_CB_FAIL;
+    }
 
     //DPRINTF("set_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, slave_pos, sdo->index, sdo->subindex);
     final_size = sdo->bitlength/8;
+    //return workcounter from last slave response
     wkc = ec_SDOwrite(slave_pos, sdo->index, sdo->subindex, false, final_size, sdo->data, EC_TIMEOUTRXM);
-    if ( wkc <= 0 || final_size!=sdo->bitlength/8 ) {
+    if ( wkc <= 0 || final_size != sdo->bitlength/8 ) {
+        // ERROR ...
         DPRINTF("Slave %d >> ", slave_pos);
         if ( wkc <= 0 ) {
             err =  ec_elist2string();
@@ -318,10 +407,10 @@ SIGNATURE(int)::set_SDO(int slave_pos, const objd_t *sdo) {
         } else {
             DPRINTF("SDO write fail : %d != %d\n", final_size, sdo->bitlength/8);
         }
-    } else {
-        // OK ....
+        return EC_WRP_SDO_SET_FAIL;
     }
-    return wkc; 
+    // OK ...
+    return EC_WRP_OK; 
 }
 
 SIGNATURE(int)::get_SDO(int slave_pos, const objd_t *sdo) {
@@ -330,12 +419,15 @@ SIGNATURE(int)::get_SDO(int slave_pos, const objd_t *sdo) {
     ec_errort   ec_error;
     int final_size, wkc;
 
-    if (!sdo) { return 0; }
+    if ( !sdo ) {
+        return 0;
+    }
 
     //DPRINTF("get_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, slave_pos, sdo->index, sdo->subindex);
     final_size = sdo->bitlength/8;
+    //return workcounter from last slave response
     wkc = ec_SDOread(slave_pos, sdo->index, sdo->subindex, false, &final_size, sdo->data, EC_TIMEOUTRXM);
-    if ( wkc <= 0 || final_size!=sdo->bitlength/8 ) {
+    if ( wkc <= 0 || final_size != sdo->bitlength/8 ) {
         DPRINTF("Slave %d >> ", slave_pos);
         if ( wkc <= 0 ) {
             err =  ec_elist2string();
@@ -343,13 +435,13 @@ SIGNATURE(int)::get_SDO(int slave_pos, const objd_t *sdo) {
         } else {
             DPRINTF("SDO read fail : %d != %d\n", final_size, sdo->bitlength/8);
         }
-    } else {
-        // OK ....
+        return EC_WRP_SDO_GET_FAIL;
     }
+    // OK ....
 
     on_getSDO(sdo);
 
-    return wkc; 
+    return EC_WRP_OK;; 
 }
 
 
