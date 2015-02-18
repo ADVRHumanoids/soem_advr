@@ -454,4 +454,68 @@ int iit::ecat::send_file(uint16_t slave, std::string filename, uint32_t passwd_f
 }
 
 
+#if 0
+
+static void calc_crc(uint8 *crc, uint8 b)
+{
+   int j;
+   *crc ^= b;
+   for(j = 0; j <= 7 ; j++ )
+   {
+     if(*crc & 0x80)
+        *crc = (*crc << 1) ^ 0x07;
+     else
+        *crc = (*crc << 1);
+   }  
+}
+
+static uint16 SIIcrc(uint8 *buf)
+{
+   int i; 
+   uint8 crc;
+    
+   crc = 0xff; 
+   for( i = 0 ; i <= 13 ; i++ )
+   {
+      calc_crc(&crc , *(buf++));  
+   } 
+   return (uint16)crc;
+}
+
+static int eeprom_writealias(int slave, int alias, uint16 crc)
+{
+   int wkc;
+   uint16 aiadr;
+   uint8 eepctl;
+   int ret;
+   
+   if((ec_slavecount >= slave) && (slave > 0) && (alias <= 0xffff))
+   {
+      aiadr = 1 - slave;
+      eepctl = 2;
+      wkc = ec_APWR(aiadr, ECT_REG_EEPCFG, sizeof(eepctl), &eepctl , EC_TIMEOUTRET); /* force Eeprom from PDI */
+      eepctl = 0;
+      wkc = ec_APWR(aiadr, ECT_REG_EEPCFG, sizeof(eepctl), &eepctl , EC_TIMEOUTRET); /* set Eeprom to master */
+
+      ret = ec_writeeepromAP(aiadr, 0x04 , alias, EC_TIMEOUTEEP);
+      if (ret)
+        ret = ec_writeeepromAP(aiadr, 0x07 , crc, EC_TIMEOUTEEP);
+        
+      return ret;
+   }
+   
+   return 0;
+}
+
+int iit::ecat::write_alias(uint16_t slave, int alias) {
+
+    uint8_t buff[1024];
+    uint16_t * wbuf = (uint16 *)buff;
+    *(wbuf + 0x04) = alias;  
+    return eeprom_writealias(slave, alias, SIIcrc(buff));
+
+}
+
+#endif
+
 

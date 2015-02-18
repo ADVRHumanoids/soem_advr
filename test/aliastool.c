@@ -21,6 +21,12 @@
 #include <unistd.h>
 #include <time.h>
 
+#ifdef __XENO__
+    #include <sys/mman.h>
+    #include <rtdk.h>
+    #define printf rt_printf
+#endif
+
 #include "ethercattype.h"
 #include "nicdrv.h"
 #include "ethercatbase.h"

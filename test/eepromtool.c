@@ -21,6 +21,14 @@
 #include <unistd.h>
 #include <time.h>
 
+#ifdef __XENO__
+    #include <sys/mman.h>
+    #include <rtdk.h>
+    #define printf rt_printf
+#endif
+#include <signal.h>
+#include <execinfo.h>
+
 #include "ethercattype.h"
 #include "nicdrv.h"
 #include "ethercatbase.h"
@@ -442,9 +450,46 @@ void eepromtool(char *ifname, int slave, int mode, char *fname)
    }
 }   
 
+
+static void warn_upon_switch(int sig __attribute__((unused)))
+{
+    // handle rt to nrt contex switch
+    void *bt[32];
+    int nentries;
+
+    /* Dump a backtrace of the frame which caused the switch to
+       secondary mode: */
+    nentries = backtrace(bt,sizeof(bt)/sizeof(bt[0]));
+    // dump backtrace 
+    //backtrace_symbols_fd(bt,nentries,fileno(stdout));
+}
+
+static void set_signal_handler(void)
+{
+#ifdef __XENO__
+    // call pthread_set_mode_np(0, PTHREAD_WARNSW) to cause a SIGXCPU
+    // signal to be sent when the calling thread involontary switches to secondary mode
+    signal(SIGXCPU, warn_upon_switch);
+#endif
+}
+
+
 int main(int argc, char *argv[])
 {
-   printf("SOEM (Simple Open EtherCAT Master)\nEEPROM tool\n");
+#ifdef __XENO__
+    pthread_attr_t      attr;
+    int                 policy;
+    cpu_set_t           cpu_set;
+    struct sched_param  schedparam;
+
+    policy = SCHED_FIFO;
+
+    set_signal_handler();
+    mlockall(MCL_CURRENT | MCL_FUTURE);
+    schedparam.__sched_priority = 50;
+    pthread_setschedparam(pthread_self(), SCHED_FIFO, &schedparam);
+#endif
+    printf("SOEM (Simple Open EtherCAT Master)\nEEPROM tool\n");
 
    mode = MODE_NONE;
    if (argc > 3)

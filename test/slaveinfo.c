@@ -621,7 +621,6 @@ int main(int argc, char *argv[])
     cpu_set_t           cpu_set;
     struct sched_param  schedparam;
 
-
     policy = SCHED_FIFO;
 
     CPU_ZERO(&cpu_set);
@@ -630,7 +629,7 @@ int main(int argc, char *argv[])
     set_signal_handler();
 
     mlockall(MCL_CURRENT | MCL_FUTURE);
-
+    
     printf("SOEM (Simple Open EtherCAT Master)\nSlaveinfo\n");
 
     if ( argc > 1 ) {

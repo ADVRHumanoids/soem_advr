@@ -81,6 +81,8 @@ int send_to_slaves(void);
 int send_file(uint16_t slave, std::string filename, uint32_t passwd_firm);
  
 void power_off(void);
+
+//int write_alias(uint16_t slave, int alias);
  
 }
 }
