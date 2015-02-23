@@ -34,7 +34,8 @@ EscWrapper::EscWrapper(const ec_slavet& slave_descriptor) : alias(0)
             position,
             _slave_arg.eep_rev,
             alias);
-    DPRINTF("   Ibytes %d Obytes %d\n", nbytes_in, nbytes_out);
+    DPRINTF("\tsupport DC %d\n", slave_descriptor.hasdc);
+    DPRINTF("\tIbytes %d Obytes %d\n", nbytes_in, nbytes_out);
 
 }
 

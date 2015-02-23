@@ -55,7 +55,26 @@ enum ec_wrp_err: int {
     EC_WRP_SDO_WRITE_FAIL,
     EC_WRP_SDO_READ_FAIL,
     EC_WRP_SDO_WRITE_CB_FAIL,
-    EC_WRP_INVALID_DTYPE
+    EC_WRP_INVALID_DTYPE,
+    EC_WRP_PDO_TX_SIZE,
+    EC_WRP_PDO_RX_SIZE,
+};
+
+#define STRFY(x)    #x
+
+static const char * ec_wrp_err_msg[] = {
+    STRFY(EC_WRP_OK),
+    /* erros */
+    STRFY(EC_WRP_NOK),
+    STRFY(EC_WRP_SDO_RO),
+    STRFY(EC_WRP_SDO_MISMATCH),
+    STRFY(EC_WRP_SDO_NOTEXIST),
+    STRFY(EC_WRP_SDO_WRITE_FAIL),
+    STRFY(EC_WRP_SDO_READ_FAIL),
+    STRFY(EC_WRP_SDO_WRITE_CB_FAIL),
+    STRFY(EC_WRP_INVALID_DTYPE),
+    STRFY(EC_WRP_PDO_TX_SIZE),
+    STRFY(EC_WRP_PDO_RX_SIZE),
 };
 
 typedef struct {
@@ -82,7 +101,7 @@ public:
 private:
     std::string make_what(std::string what_arg, int err_no) {
         std::ostringstream msg;
-        msg << "EC_Wrp_Error " << err_no << " " << what_arg;
+        msg << "EC_Wrp_Error " << err_no << ":" << ec_wrp_err_msg[err_no] << " " << what_arg;
         return msg.str();
     }
     int error_num;
@@ -149,7 +168,7 @@ inline int check_datatype(int datatype, T t) {
             }
             break;
         default:
-            throw EscWrpError(EC_WRP_INVALID_DTYPE, "");
+            throw EscWrpError(EC_WRP_INVALID_DTYPE, " ");
     }
 
     return EC_WRP_OK;
@@ -168,11 +187,11 @@ public:
     virtual void readPDO() = 0;
     virtual void writePDO() = 0;
 
-    virtual const objd_t * get_SDO_objd() = 0;
+    virtual const objd_t * get_SDOs(void) = 0;
 
-    virtual uint16_t get_ESC_type() = 0;
+    virtual uint16_t get_ESC_type(void) = 0;
 
-    const uint8_t* getRawData() const;
+    const uint8_t* getRawData(void) const;
 
     const uint16_t get_configadr() { return configadr;}
 
@@ -204,12 +223,21 @@ public:
 
 public:
     BasicEscWrapper(const ec_slavet& slave_descriptor) :
-    EscWrapper(slave_descriptor) {}
+    EscWrapper(slave_descriptor) {
+        char err_msg[256];
+        if ( nbytes_in  != sizeof(pdo_rx_t) ) {
+            snprintf(err_msg, sizeof(err_msg), "nbytes_in %d != %d pdo_rx_t", nbytes_in, sizeof(pdo_rx_t));
+            throw EscWrpError(EC_WRP_PDO_RX_SIZE, err_msg);
+        }
+        if ( nbytes_out != sizeof(pdo_tx_t) ) {
+            snprintf(err_msg, sizeof(err_msg), "nbytes_out %d != %d pdo_tx_t", nbytes_out, sizeof(pdo_tx_t));
+            throw EscWrpError(EC_WRP_PDO_TX_SIZE, err_msg);
+        }
+    }
 
     void init_sdo_lookup(void);
 
-    sdo_t& getSDO_ptr();
-    objd_t * getObjd_ptr(const char * name);
+    const objd_t * getSDObjd(const char * name);
 
     template<typename T>
     int writeSDO_byname(const char * name, T t);
@@ -217,13 +245,13 @@ public:
     template<typename T>
     int readSDO_byname(const char * name, T &t);
     int readSDO_byname(const char * name);
+
     template<typename T>
     int getSDO_byname(const char * name, T &t);
 
-    const pdo_rx_t& getRxPDO() const;
-    const pdo_tx_t& getTxPDO() const;
-
-    void setTxPDO(const pdo_tx_t&);
+    virtual const pdo_rx_t& getRxPDO() const;
+    virtual const pdo_tx_t& getTxPDO() const;
+    virtual void setTxPDO(const pdo_tx_t&);
 
 protected:
 
@@ -282,27 +310,23 @@ SIGNATURE(void)::setTxPDO(const pdo_tx_t& tx) {
 
 SIGNATURE(void)::init_sdo_lookup(void) {
 
-    const objd_t * sdo = get_SDO_objd();
+    const objd_t * sdo = get_SDOs();
     while ( sdo && sdo->index ) {
         sdo_look_up[sdo->name] = sdo;
         if ( readSDO(sdo) != EC_WRP_OK) {
             // raise EscWrpError or IGNORE and continue ?!?!?
-            //throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);		
+            throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);		
         }
         sdo ++;
     }
 }
 
-SIGNATURE(typename CLASS::sdo_t&)::getSDO_ptr() {
-    return sdo;
-}
-
-SIGNATURE(objd_t *)::getObjd_ptr(const char * name) {
-    objd_t * sdo;
+SIGNATURE(const objd_t *)::getSDObjd(const char * name) {
+    const objd_t * sdo = 0;
     try {
         sdo = sdo_look_up.at(name);
     } catch ( const std::out_of_range& oor ) {
-        return 0;
+        throw EscWrpError(EC_WRP_SDO_NOTEXIST, name);
     }
     return sdo;
 }
@@ -312,21 +336,21 @@ template<typename T>
 inline int CLASS::writeSDO_byname(const char * name, const T t) {
 
     // look up name in SDOs
-    const objd_t * sdo;
-    try {
-        sdo = sdo_look_up.at(name);
-    } catch ( const std::out_of_range& oor ) {
-        throw EscWrpError(EC_WRP_SDO_NOTEXIST, sdo->name);
-    }
+    const objd_t * sdo = getSDObjd(name);
+
     if ( sdo->access == ATYPE_RO ) {
         DPRINTF("ERROR sdo obj is READ_ONLY %s\n", sdo->name);
         throw EscWrpError(EC_WRP_SDO_RO, sdo->name);
     }
+
+    // check if sdobj datatype match template variable
     if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
         DPRINTF("ERROR set_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
         throw EscWrpError(EC_WRP_SDO_MISMATCH, sdo->name);
     }
+
     *((T*)sdo->data) = t;
+
     if ( writeSDO(sdo) != EC_WRP_OK ) {
         throw EscWrpError(EC_WRP_SDO_WRITE_FAIL, sdo->name);
     }
@@ -338,13 +362,9 @@ TEMPL
 template<typename T>
 inline int CLASS::getSDO_byname(const char * name, T &t) {
 
-    const objd_t * sdo;
     // look up name in SDOs
-    try {
-        sdo = sdo_look_up.at(name);
-    } catch ( const std::out_of_range& oor ) {
-        throw EscWrpError(EC_WRP_SDO_NOTEXIST, sdo->name);
-    }
+    const objd_t * sdo = getSDObjd(name);
+
     // check if sdobj datatype match template variable
     if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
         DPRINTF("ERROR get_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
@@ -360,13 +380,9 @@ TEMPL
 template<typename T>
 inline int CLASS::readSDO_byname(const char * name, T &t) {
 
-    const objd_t * sdo;
     // look up name in SDOs
-    try {
-        sdo = sdo_look_up.at(name);
-    } catch ( const std::out_of_range& oor ) {
-        throw EscWrpError(EC_WRP_SDO_NOTEXIST, sdo->name);
-    }
+    const objd_t * sdo = getSDObjd(name);
+
     // check if sdobj datatype match template variable
     if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
         DPRINTF("ERROR get_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
@@ -383,13 +399,9 @@ inline int CLASS::readSDO_byname(const char * name, T &t) {
 
 SIGNATURE(int)::readSDO_byname(const char * name) {
 
-    const objd_t * sdo;
     // look up name in SDOs
-    try {
-        sdo = sdo_look_up.at(name);
-    } catch ( const std::out_of_range& oor ) {
-        throw EscWrpError(EC_WRP_SDO_NOTEXIST, sdo->name);
-    }
+    const objd_t * sdo = getSDObjd(name);
+
     // read using mailbox
     if ( readSDO(sdo) != EC_WRP_OK) {
         throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
@@ -421,7 +433,7 @@ SIGNATURE(int)::writeSDO(const objd_t *sdo) {
         DPRINTF("*** Slave %d %s >> ", position, sdo->name);
         if ( wkc <= 0 ) {
             err =  ec_elist2string();
-            DPRINTF("Ec_error : %s\n", err);
+            DPRINTF("SDO write fail : %s\n", err);
         } else {
             DPRINTF("SDO write fail : mismatch size %d != %d\n", final_size, sdo->bitlength/8);
         }
@@ -434,7 +446,7 @@ SIGNATURE(int)::writeSDO(const objd_t *sdo) {
 SIGNATURE(int)::readSDO(const objd_t *sdo) {
 
     char * err;
-    ec_errort   ec_error;
+    //ec_errort   ec_error;
     int final_size, wkc;
 
     if ( !sdo ) {
@@ -449,9 +461,9 @@ SIGNATURE(int)::readSDO(const objd_t *sdo) {
         DPRINTF("*** Slave %d %s >> ", position, sdo->name);
         if ( wkc <= 0 ) {
             err =  ec_elist2string();
-            DPRINTF("Ec_error : %s\n", err);
+            DPRINTF("SDO read fail : %s\n", err);
         } else {
-            DPRINTF("SDO write fail : mismatch size %d != %d\n", final_size, sdo->bitlength/8);
+            DPRINTF("SDO read fail : mismatch size %d != %d\n", final_size, sdo->bitlength/8);
         }
         return EC_WRP_SDO_READ_FAIL;
     }

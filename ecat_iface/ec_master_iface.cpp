@@ -18,6 +18,7 @@
 
 #include <pthread.h>
 #include <string.h>
+#include <libgen.h>
 
 #include <string>
 #include <fstream>
@@ -117,19 +118,21 @@ void * ecat_thread( void* cycle_ns )
         wkc = ecat_cycle();
         pthread_mutex_unlock(&ecat_mutex);
 
+        t_now = get_time_ns();
+        t_delta =  t_now - t_prec;
+        t_prec = t_now;
+
         if ( ec_slave[0].hasdc && cycle_time_ns != 0 ) {
             /* calulate toff to get linux time and DC synced */
             ec_sync(ec_DCtime, cycle_time_ns, &toff);
-            t_now = get_time_ns();
-            t_delta =  t_now - t_prec;
-            t_prec = t_now;
-
-            ec_timing.recv_dc_time = ec_DCtime;
-            ec_timing.offset = toff;
-            ec_timing.loop_time = t_delta;
         } else {
             toff = 250000;
         }
+        
+        ec_timing.recv_dc_time = ec_DCtime;
+        ec_timing.offset = toff;
+        ec_timing.loop_time = t_delta;
+
         if ( wkc >= expectedWKC ) {
 
             pthread_mutex_lock(&ecat_mux_sync);
@@ -433,17 +436,18 @@ int iit::ecat::send_to_slaves(void) {
 
 }
 
-//int iit::ecat::update_slave_firmware(uint16_t slave, std::string firmware, uint32_t passwd_firm) {
 int iit::ecat::send_file(uint16_t slave, std::string filename, uint32_t passwd_firm) {
 
     int result;
+    char * base;
 
     std::ifstream file_stream(filename);
     std::string file_buff((std::istreambuf_iterator<char>(file_stream)), std::istreambuf_iterator<char>());
 
     DPRINTF("File read OK, %d bytes.\n",file_buff.length());
     DPRINTF("Update ....\n");
-    result = ec_FOEwrite(slave, (char*)filename.c_str(), passwd_firm, file_buff.length() ,(void*)file_buff.c_str(), EC_TIMEOUTSTATE*10);
+    base = basename((char*)filename.c_str());
+    result = ec_FOEwrite(slave, base, passwd_firm, file_buff.length() ,(void*)file_buff.c_str(), EC_TIMEOUTSTATE*10);
     if ( result <= 0 ) {
         char * err =  ec_elist2string();
         DPRINTF("Ec_error : %s\n", err);
