@@ -39,7 +39,7 @@ struct ec_timing_t {
     int64_t     recv_dc_time; ///< reception timestamp from 1-1-2000 (in [ns])
     int64_t     offset;       ///< sleep time of the master until next "DC tick"
     uint64_t    loop_time;    ///< actual measure of the DC period
-
+    int32_t     ecat_rx_wkc;
 };
 
 typedef std::shared_ptr<EscWrapper>  ESCPtr;

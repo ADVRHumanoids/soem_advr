@@ -31,7 +31,7 @@
  */
 static uint8_t IOmap[4096];
 
-static int expectedWKC, g_wkc, ecat_thread_run; 
+static int expectedWKC, ecat_thread_run; 
 
 static pthread_t        ecat_thread_id;
 static pthread_mutex_t  ecat_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -132,8 +132,9 @@ void * ecat_thread( void* cycle_ns )
         ec_timing.recv_dc_time = ec_DCtime;
         ec_timing.offset = toff;
         ec_timing.loop_time = t_delta;
-
-        if ( wkc >= expectedWKC ) {
+        ec_timing.ecat_rx_wkc = wkc;
+        
+        if ( wkc > 0 ) {
 
             pthread_mutex_lock(&ecat_mux_sync);
             pthread_cond_signal(&ecat_cond);
@@ -400,22 +401,31 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     // By default, CLOCK_REALTIME is used.
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec = ts.tv_sec + 1;
-
+    //ts.tv_sec = ts.tv_sec + 1;
+    add_timespec(&ts,250000000);
+    
     pthread_mutex_lock(&ecat_mux_sync);
     ret = pthread_cond_timedwait(&ecat_cond, &ecat_mux_sync, &ts);
     pthread_mutex_unlock(&ecat_mux_sync);
 
     *timing = ec_timing;
 
-    //ret 0 on success,
-    if ( ! ret ) {
-        for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-            it->second->readPDO();
-        }
-    }
-
     // ret < 0 on error
+    if ( ret < 0) {
+       return ret; 
+    }
+    
+    // wkc > 0 ... check if wkc == expectedWKC
+    ret = ec_timing.ecat_rx_wkc;
+    
+    if ( ec_timing.ecat_rx_wkc != expectedWKC ) {
+        DPRINTF("[ECat_master] WARN: wkc %d != %d expectedWKC\n", ec_timing.ecat_rx_wkc , expectedWKC);
+    }
+    
+    for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
+        it->second->readPDO();
+    }
+        
     return ret;
 }
 
@@ -428,8 +438,8 @@ int iit::ecat::send_to_slaves(void) {
     }
 
     pthread_mutex_lock(&ecat_mutex);
-    //ec_send_processdata();
-    wkc = ecat_cycle();
+    wkc = ec_send_processdata();
+    //wkc = ecat_cycle();
     pthread_mutex_unlock(&ecat_mutex);
 
     return wkc;

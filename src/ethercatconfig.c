@@ -170,7 +170,8 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
    b = 0x00;
    ecx_BWR(context->port, 0x0000, ECT_REG_DLALIAS, sizeof(b), &b, EC_TIMEOUTRET3);    /* Ignore Alias register */
    b = EC_STATE_INIT | EC_STATE_ACK;
-   ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
+   wkc = ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
+   printf("wkc = %d\n",wkc);
    /* netX100 should now be happy */
    
    ///
@@ -178,9 +179,11 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
    /// 
    ///  
 #if 1
-   ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTRET3);
+   wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
+   printf("wkc = %d\n",wkc);
+#if 0
    while ( try_cnt-- ) {
-       ec_BRD(0x0000, 0x0f18, sizeof(power_in_gpio), &power_in_gpio, EC_TIMEOUTRET3);
+       ec_BRD(0x0000, 0x0f18, sizeof(power_in_gpio), &power_in_gpio, EC_TIMEOUTSAFE);
        if ( power_in_gpio ) {
            break;
        }
@@ -189,17 +192,19 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
        EC_PRINT("[ECat_master] Failed to POWER ON C2000 slaves!\n");
        //return 0;
    }
-   osal_usleep(3000000);
+#endif
+   osal_usleep(5000000);
    EC_PRINT("[ECat_master] POWER ON slaves.\n");
 #endif
    ///
    ///
 
    wkc = ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
-   //printf("wkc = %d\n",wkc);
+   printf("wkc = %d\n",wkc);
    
    w = 0x0000;
    wkc = ecx_BRD(context->port, 0x0000, ECT_REG_TYPE, sizeof(w), &w, EC_TIMEOUTSAFE);   /* detect number of slaves */
+   printf("slavecnt wkc = %d\n",wkc);
    if (wkc > 0)
    {
       *(context->slavecount) = wkc;
