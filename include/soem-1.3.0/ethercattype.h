@@ -428,6 +428,8 @@ enum
    ECT_REG_PDICTL      = 0x0140,
    ECT_REG_IRQMASK     = 0x0200,
    ECT_REG_RXERR       = 0x0300,
+   ECT_REG_FWRXERR     = 0x0308,
+   ECT_REG_LOSTLINK    = 0x0310,
    ECT_REG_EEPCFG      = 0x0500,
    ECT_REG_EEPCTL      = 0x0502,
    ECT_REG_EEPSTAT     = 0x0502,

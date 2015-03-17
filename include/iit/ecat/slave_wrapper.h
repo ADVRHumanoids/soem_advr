@@ -195,6 +195,8 @@ public:
 
     const uint16_t get_configadr() { return configadr;}
 
+    void readErrReg(void);
+    void resetError(void);
 
 protected:
     uint16_t alias;
@@ -203,11 +205,15 @@ protected:
     uint32_t vendor_id;
     uint32_t product_code;
 
+    uint16_t topology, active_ports;
+    
+    // error counter on port[n]
+    uint16  invalid_frame[4], rx_error[4], fw_error[4], lost_link[4];
 
     uint8_t   * inputs, * outputs;
     uint32_t  nbytes_in, nbytes_out;
 
-
+    const ec_slavet * ec_slave_desc;
 };
 
 
@@ -323,7 +329,7 @@ SIGNATURE(void)::init_sdo_lookup(void) {
         sdo_look_up[sdo->name] = sdo;
         if ( readSDO(sdo) != EC_WRP_OK) {
             // raise EscWrpError or IGNORE and continue ?!?!?
-            throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);		
+            throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
         }
         sdo ++;
     }

@@ -311,6 +311,12 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
         return 0;
     }
 
+    // reset error counter
+    for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
+        it->second->resetError();
+    }
+
+    
     // We are now in OP ...
     sleep_time = { 0, 50000};
     if ( *ecat_cycle_ns > 0 ) {
@@ -420,6 +426,9 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     
     if ( ec_timing.ecat_rx_wkc != expectedWKC ) {
         DPRINTF("[ECat_master] WARN: wkc %d != %d expectedWKC\n", ec_timing.ecat_rx_wkc , expectedWKC);
+        for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
+            it->second->readErrReg();
+        }
     }
     
     for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
