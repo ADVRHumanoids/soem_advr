@@ -59,7 +59,7 @@ static int ecat_cycle(void) {
 static void ec_sync(const int64_t reftime, const uint64_t cycletime , int64_t* offsettime)
 {
     /* master sync offset with ec_DCtime */
-    static const uint32_t sync_point_ns = 400000; //300000; //500000;
+    static const uint32_t sync_point_ns = 300000; //500000; //400000;  
     static int64_t integral = 0;
     int64_t delta;
 
@@ -442,11 +442,13 @@ int iit::ecat::send_to_slaves(void) {
 
     int wkc;
 
+    pthread_mutex_lock(&ecat_mutex);
+    
     for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
         it->second->writePDO();
     }
 
-    pthread_mutex_lock(&ecat_mutex);
+    //pthread_mutex_lock(&ecat_mutex);
     wkc = ec_send_processdata();
     //wkc = ecat_cycle();
     pthread_mutex_unlock(&ecat_mutex);
