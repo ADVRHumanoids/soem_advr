@@ -337,7 +337,7 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
 
     expectedWKC = (ec_group[0].outputsWKC * 2) + ec_group[0].inputsWKC;
     DPRINTF("[ECat_master] Calculated workcounter %d\n", expectedWKC);
-    DPRINTF("[ECat_master] ec_DCtime %d\n", ec_DCtime);
+    DPRINTF("[ECat_master] ec_DCtime %ld\n", ec_DCtime);
     DPRINTF("[ECat_master] o: %d   i: %d\n", ec_slave[0].Obytes, ec_slave[0].Ibytes);
 
 
