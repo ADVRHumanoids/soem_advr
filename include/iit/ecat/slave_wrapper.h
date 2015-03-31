@@ -235,17 +235,17 @@ public:
 
         int actual_state = ec_statecheck(position,EC_STATE_PRE_OP, EC_TIMEOUTSTATE);
 
-        if ( actual_state != EC_STATE_INIT && actual_state != EC_STATE_BOOT ) {
-                 
-            if ( nbytes_in  != sizeof(pdo_rx_t) ) {
-                snprintf(err_msg, sizeof(err_msg), "nbytes_in %d != %d pdo_rx_t", nbytes_in, sizeof(pdo_rx_t));
-                throw EscWrpError(EC_WRP_PDO_RX_SIZE, err_msg);
-            }
-            if ( nbytes_out != sizeof(pdo_tx_t) ) {
-                snprintf(err_msg, sizeof(err_msg), "nbytes_out %d != %d pdo_tx_t", nbytes_out, sizeof(pdo_tx_t));
-                throw EscWrpError(EC_WRP_PDO_TX_SIZE, err_msg);
-            }
-        }
+//         if ( actual_state != EC_STATE_INIT && actual_state != EC_STATE_BOOT ) {
+//                  
+//             if ( nbytes_in  != sizeof(pdo_rx_t) ) {
+//                 snprintf(err_msg, sizeof(err_msg), "nbytes_in %d != %d pdo_rx_t", nbytes_in, sizeof(pdo_rx_t));
+//                 throw EscWrpError(EC_WRP_PDO_RX_SIZE, err_msg);
+//             }
+//             if ( nbytes_out != sizeof(pdo_tx_t) ) {
+//                 snprintf(err_msg, sizeof(err_msg), "nbytes_out %d != %d pdo_tx_t", nbytes_out, sizeof(pdo_tx_t));
+//                 throw EscWrpError(EC_WRP_PDO_TX_SIZE, err_msg);
+//             }
+//         }
 
     }
 
