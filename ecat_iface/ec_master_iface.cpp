@@ -59,7 +59,7 @@ static int ecat_cycle(void) {
 static void ec_sync(const int64_t reftime, const uint64_t cycletime , int64_t* offsettime)
 {
     /* master sync offset with ec_DCtime */
-    static const uint32_t sync_point_ns = 400000; //500000; //300000;  
+    static const uint32_t sync_point_ns = 300000; //500000; //400000;  
     static int64_t integral = 0;
     int64_t delta;
 
@@ -326,7 +326,7 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
         // Update ec_DCtime so we can calculate stop time below.
         ecat_cycle();
         // Send a barrage of packets to set up the DC clock.
-        int64_t stoptime = ec_DCtime + *ecat_cycle_shift_ns/2;
+        int64_t stoptime = ec_DCtime + *ecat_cycle_shift_ns;
         // SOEM automatically updates ec_DCtime.
         //DPRINTF("[ECat_master] warm up\n");
         while ( ec_DCtime < stoptime ) {
@@ -347,7 +347,7 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
     pthread_mutex_init(&ecat_mutex, NULL);
     pthread_mutex_init(&ecat_mux_sync, NULL);
     pthread_cond_init(&ecat_cond, NULL);
-    // start thread, setting distribuited clock DC0 to 1 ms
+    // start thread, setting distribuited clock DC0 to ecat_cycle_ns
     start_ecat_thread(ecat_cycle_ns);
 
 
@@ -429,6 +429,8 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     
     if ( ec_timing.ecat_rx_wkc != expectedWKC ) {
         DPRINTF("[ECat_master] WARN: wkc %d != %d expectedWKC\n", ec_timing.ecat_rx_wkc , expectedWKC);
+        return ret;
+        
         for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
             it->second->readErrReg();
         }
