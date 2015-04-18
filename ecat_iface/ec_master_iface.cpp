@@ -429,17 +429,18 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     
     if ( ec_timing.ecat_rx_wkc != expectedWKC ) {
         DPRINTF("[ECat_master] WARN: wkc %d != %d expectedWKC\n", ec_timing.ecat_rx_wkc , expectedWKC);
-        return ret;
-        
         for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
             it->second->readErrReg();
         }
+        // ret > 0 but wkc != expectedWKC
+        return ret;
     }
     
     for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
         it->second->readPDO();
     }
         
+    // ret > 0 and wkc == expectedWKC
     return ret;
 }
 
