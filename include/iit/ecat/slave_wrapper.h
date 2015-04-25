@@ -441,7 +441,8 @@ SIGNATURE(int)::writeSDO(const objd_t *sdo) {
     //DPRINTF("set_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, slave_pos, sdo->index, sdo->subindex);
     final_size = sdo->bitlength/8;
     //return workcounter from last slave response
-    wkc = ec_SDOwrite(position, sdo->index, sdo->subindex, false, final_size, sdo->data, EC_TIMEOUTRXM);
+    // use a long timeout on rxm because flash_cmd on C2000 to save params to flash takes time .... 
+    wkc = ec_SDOwrite(position, sdo->index, sdo->subindex, false, final_size, sdo->data, EC_TIMEOUTRXM * 10);
     if ( wkc <= 0 || final_size != sdo->bitlength/8 ) {
         // ERROR ...
         DPRINTF("*** Slave %d %s >> ", position, sdo->name);
