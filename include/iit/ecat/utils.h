@@ -64,7 +64,7 @@ inline void dump_buffer(std::string filename, T t) {
 
     for ( typename T::iterator it=t.begin(); it!=t.end(); it++ ) {
         (*it).sprint(buffer, sizeof(buffer));
-        log_file << std::string(buffer);
+        log_file << std::string(buffer) <<  std::endl;
     }
     log_file << std::flush;
     log_file.close();

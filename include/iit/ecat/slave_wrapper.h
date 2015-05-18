@@ -198,6 +198,8 @@ public:
     void readErrReg(void);
     void resetError(void);
 
+    uint16_t get_ec_position(void) { return position; }
+    
 protected:
     uint16_t alias;
     uint16_t position;

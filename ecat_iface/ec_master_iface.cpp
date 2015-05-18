@@ -207,7 +207,7 @@ int iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
 
             for ( int i = 1; i<=ec_slavecount ; i++ ) {
                 if ( ec_slave[i].state != req_state ) {
-                    DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
+                    DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s",
                             i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
                     //if ( ec_slave[i].state & ec_error_mask ) {
                     // attemping to ack
@@ -218,6 +218,8 @@ int iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
                         // still req_state not reached ...
                         DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                                 i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
+                    } else {
+                        DPRINTF("... reach State=0x%02X\n", ec_slave[i].state);
                     }
                     //}
                 }
