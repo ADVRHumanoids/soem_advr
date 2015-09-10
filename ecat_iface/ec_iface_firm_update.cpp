@@ -121,8 +121,8 @@ int main(int argc, char **argv)
 
     send_file(slave_pos, argv[3], password);
 
-        
-    sleep(1);
+    req_state_check(slave_pos, EC_STATE_INIT);
+
     finalize();
 
 

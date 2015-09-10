@@ -147,7 +147,11 @@ void * ecat_thread( void* cycle_ns )
             //DPRINTF("wkc %d\n", wkc);
         }
 
-    }    
+    }  
+      
+    DPRINTF("[ECat_master] ecat thread exit clean !!!\n");
+
+    return 0;
 }
 
 
@@ -265,7 +269,6 @@ int iit::ecat::initialize(const char* ifname)
     // retunr workcounter of slave discover datagram = number of slaves found
     ec_config(FALSE, &IOmap);
 
-
     DPRINTF("[ECat_master] %d EtherCAT slaves identified.\n", ec_slavecount);
     if ( ec_slavecount < 1 ) {
         DPRINTF("[ECat_master] Failed to identify any slaves! Failing to init.\n");
@@ -316,9 +319,11 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
         return 0;
     }
 
-    // reset error counter
-    for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-        it->second->resetError();
+    if ( userSlaves != 0 ) {
+        // reset error counter
+        for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
+            it->second->resetError();
+        }
     }
 
     
@@ -337,6 +342,7 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
             //DPRINTF("[ECat_master] ec_DCtime %ld %ld\n", ec_DCtime, stoptime);
 
         }
+
     }
     // We now have data.
 
@@ -357,6 +363,23 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
 
 }
 
+int iit::ecat::pre_operational(void) {
+
+    DPRINTF("[ECat_master] Stop ecat_thread\n");
+    ecat_thread_run = 0;
+    //pthread_cancel(ecat_thread_id);
+    pthread_join(ecat_thread_id, NULL);
+
+    int state = req_state_check(0, EC_STATE_PRE_OP);
+
+    for ( int i = 1; i <= ec_slavecount; i++ ) {
+        ec_dcsync0(i, FALSE, 0, 0); // SYNC0 off
+    }
+
+    return state;
+}
+
+
 void iit::ecat::power_off() {
 
     DPRINTF("[ECat_master] POWER OFF slaves.\n");
@@ -367,16 +390,7 @@ void iit::ecat::power_off() {
 
 void iit::ecat::finalize(void) {
 
-
-    DPRINTF("[ECat_master] Stop ecat_thread\n");
-    ecat_thread_run = 0;
-    pthread_join(ecat_thread_id, NULL);
-
-    req_state_check(0, EC_STATE_PRE_OP);
-
-    for ( int i = 1; i <= ec_slavecount; i++ ) {
-        ec_dcsync0(i, FALSE, 0, 0); // SYNC0 off
-    }
+    pre_operational();
 
     req_state_check(0, EC_STATE_INIT);
 

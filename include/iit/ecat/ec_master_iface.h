@@ -67,6 +67,11 @@ int operational(
 /**
  *
  */
+int pre_operational(void);
+
+/**
+ *
+ */
 void finalize(void);
 
 // return actual state
