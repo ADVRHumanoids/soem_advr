@@ -26,6 +26,9 @@
 
 using namespace boost::accumulators;
 
+namespace iit {
+namespace ecat {
+    
 typedef accumulator_set<uint64_t,
         features<
              tag::count
@@ -98,6 +101,9 @@ inline void add_timespec(struct timespec *ts, int64_t addtime)
         ts->tv_sec += (ts->tv_nsec - nsec) / NSEC_PER_SEC;
         ts->tv_nsec = nsec;
     }
+}
+
+}
 }
 
 

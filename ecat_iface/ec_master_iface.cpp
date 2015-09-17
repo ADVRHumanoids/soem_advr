@@ -112,7 +112,7 @@ void * ecat_thread( void* cycle_ns )
     while ( ecat_thread_run ) {
         
         /* calculate next cycle start */
-        add_timespec(&ts, cycle_time_ns + toff);
+        iit::ecat::add_timespec(&ts, cycle_time_ns + toff);
         /* wait to cycle start */
         rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, NULL);
 
@@ -121,7 +121,7 @@ void * ecat_thread( void* cycle_ns )
         wkc = ecat_cycle();
         pthread_mutex_unlock(&ecat_mutex);
 
-        t_now = get_time_ns();
+        t_now = iit::ecat::get_time_ns();
         t_delta =  t_now - t_prec;
         t_prec = t_now;
 
