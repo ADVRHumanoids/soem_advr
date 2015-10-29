@@ -191,7 +191,7 @@ public:
 
     virtual uint16_t get_ESC_type(void) = 0;
 
-    const uint8_t* getRawData(void) const;
+    //const uint8_t* getRawData(void) const;
 
     const uint16_t get_configadr() { return configadr;}
 
@@ -470,7 +470,7 @@ SIGNATURE(int)::readSDO(const objd_t *sdo) {
         return EC_WRP_NOK;
     }
 
-    //DPRINTF("get_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, slave_pos, sdo->index, sdo->subindex);
+    //DPRINTF("get_SDO %s [%d.0x%04X.0x%02X]\n", sdo->name, position, sdo->index, sdo->subindex);
     final_size = sdo->bitlength/8;
     //return workcounter from last slave response
     wkc = ec_SDOread(position, sdo->index, sdo->subindex, false, &final_size, sdo->data, EC_TIMEOUTRXM);
