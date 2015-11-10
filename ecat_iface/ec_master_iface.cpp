@@ -35,9 +35,8 @@ static int expectedWKC, ecat_thread_run;
 
 static pthread_t        ecat_thread_id;
 static pthread_mutex_t  ecat_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 static pthread_mutex_t  ecat_mux_sync = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t   ecat_cond;
+static pthread_cond_t   ecat_cond = PTHREAD_COND_INITIALIZER;
 
 static iit::ecat::ec_timing_t ec_timing;
 
@@ -260,6 +259,10 @@ int iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
 int iit::ecat::initialize(const char* ifname)
 {
 
+    pthread_mutex_init(&ecat_mutex, NULL);
+    pthread_mutex_init(&ecat_mux_sync, NULL);
+    pthread_cond_init(&ecat_cond, NULL);
+
     DPRINTF("[ECat_master] Using %s\n", ifname);
     if ( ! ec_init((char*)ifname) ) {
         DPRINTF("[ECat_master] ECat_rt_soem_Master: ec_init(%s) failed!\n", ifname);
@@ -310,7 +313,7 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
 
     req_state_check(0, EC_STATE_SAFE_OP);
 
-    sleep_time = { 0, 50000000};
+    sleep_time = { 0, 50000000}; // 50 ms
     clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
 
     if ( req_state_check(0, EC_STATE_OPERATIONAL) != EC_STATE_OPERATIONAL ) {
@@ -325,7 +328,6 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
             it->second->resetError();
         }
     }
-
     
     // We are now in OP ...
     sleep_time = { 0, 50000};
@@ -334,8 +336,9 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
         ecat_cycle();
         // Send a barrage of packets to set up the DC clock.
         int64_t stoptime = ec_DCtime + *ecat_cycle_shift_ns;
+        //int64_t stoptime = ec_DCtime + 1e8L;
         // SOEM automatically updates ec_DCtime.
-        //DPRINTF("[ECat_master] warm up\n");
+        //DPRINTF("[ECat_master] warm up .. fix to 100 ms\n");
         while ( ec_DCtime < stoptime ) {
             ecat_cycle();
             clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
@@ -351,10 +354,6 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
     DPRINTF("[ECat_master] ec_DCtime %ld\n", ec_DCtime);
     DPRINTF("[ECat_master] o: %d   i: %d\n", ec_slave[0].Obytes, ec_slave[0].Ibytes);
 
-
-    pthread_mutex_init(&ecat_mutex, NULL);
-    pthread_mutex_init(&ecat_mux_sync, NULL);
-    pthread_cond_init(&ecat_cond, NULL);
     // start thread, setting distribuited clock DC0 to ecat_cycle_ns
     start_ecat_thread(ecat_cycle_ns);
 

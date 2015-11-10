@@ -262,8 +262,8 @@ public:
     int readSDO_byname(const char * name, T &t);
     int readSDO_byname(const char * name);
 
-    template<typename T>
-    int getSDO_byname(const char * name, T &t);
+    //template<typename T>
+    //int getSDO_byname(const char * name, T &t);
 
     virtual const pdo_rx_t& getRxPDO() const;
     virtual const pdo_tx_t& getTxPDO() const;
@@ -329,10 +329,10 @@ SIGNATURE(void)::init_sdo_lookup(void) {
     const objd_t * sdo = get_SDOs();
     while ( sdo && sdo->index ) {
         sdo_look_up[sdo->name] = sdo;
-        if ( readSDO(sdo) != EC_WRP_OK) {
-            // raise EscWrpError or IGNORE and continue ?!?!?
-            throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
-        }
+//         if ( readSDO(sdo) != EC_WRP_OK) {
+//             // raise EscWrpError or IGNORE and continue ?!?!?
+//             throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
+//         }
         sdo ++;
     }
 }
@@ -374,23 +374,23 @@ inline int CLASS::writeSDO_byname(const char * name, const T t) {
     return EC_WRP_OK;
 }
 
-TEMPL
-template<typename T>
-inline int CLASS::getSDO_byname(const char * name, T &t) {
-
-    // look up name in SDOs
-    const objd_t * sdo = getSDObjd(name);
-
-    // check if sdobj datatype match template variable
-    if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
-        DPRINTF("ERROR get_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
-        throw EscWrpError(EC_WRP_SDO_MISMATCH, sdo->name);
-    }
-
-    t = *((T*)sdo->data);
-
-    return EC_WRP_OK;  
-}
+// TEMPL
+// template<typename T>
+// inline int CLASS::getSDO_byname(const char * name, T &t) {
+// 
+//     // look up name in SDOs
+//     const objd_t * sdo = getSDObjd(name);
+// 
+//     // check if sdobj datatype match template variable
+//     if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
+//         DPRINTF("ERROR get_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
+//         throw EscWrpError(EC_WRP_SDO_MISMATCH, sdo->name);
+//     }
+// 
+//     t = *((T*)sdo->data);
+// 
+//     return EC_WRP_OK;  
+// }
 
 TEMPL
 template<typename T>
