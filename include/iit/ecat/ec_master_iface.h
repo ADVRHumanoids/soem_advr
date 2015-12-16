@@ -61,8 +61,8 @@ int initialize(const char* ifname);
  * \return int expectedWKC
  */
 int operational(
-        const uint64_t* ecat_cycle_ns,
-        const uint64_t* ecat_cycle_shift_ns);
+        const uint32_t ecat_cycle_ns,
+        const uint32_t ecat_cycle_shift_ns);
 
 /**
  *

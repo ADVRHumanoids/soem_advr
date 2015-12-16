@@ -83,8 +83,8 @@ int main(int argc, char **argv)
     char *      firmware_file = 0;
     int         expected_wkc;
     //uint64_t    sync_cycle_time_ns = 1e6;     //  1ms
-    uint64_t    sync_cycle_time_ns = 0;         //  no dc 
-    uint64_t    sync_cycle_offset_ns = 0;       //  0ms
+    uint32_t    sync_cycle_time_ns = 0;         //  no dc 
+    uint32_t    sync_cycle_offset_ns = 0;       //  0ms
 
 
     if ( argc > 1 ) {
@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 
 
     initialize(argv[1]);
-    expected_wkc = operational(&sync_cycle_time_ns, &sync_cycle_offset_ns);
+    expected_wkc = operational(sync_cycle_time_ns, sync_cycle_offset_ns);
     finalize();
 
     return 0;

@@ -101,7 +101,7 @@ void * ecat_thread( void* cycle_ns )
     rc = clock_gettime(CLOCK_MONOTONIC, &ts);
     ht = (ts.tv_nsec / 1000000) + 1; /* round to nearest ms */
     ts.tv_nsec = ht * 1000000;
-    cycle_time_ns = *((uint64_t*)(cycle_ns)); /* cycletime in ns */
+    cycle_time_ns = (uint64_t)(cycle_ns); /* cycletime in ns */
     //DPRINTF("%llu \n", cycle_time_ns);
     toff = 0;
     pthread_mutex_lock(&ecat_mutex);
@@ -154,7 +154,7 @@ void * ecat_thread( void* cycle_ns )
 }
 
 
-static void start_ecat_thread(const uint64_t* cycle_time_ns) {
+static void start_ecat_thread(const uint32_t cycle_time_ns) {
 
     pthread_attr_t      attr;
     int                 policy;
@@ -179,7 +179,7 @@ static void start_ecat_thread(const uint64_t* cycle_time_ns) {
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     pthread_attr_setaffinity_np(&attr, sizeof(cpu_set), &cpu_set);
 
-    DPRINTF("[ECat_master] Start ecat_thread %llu ns\n", *cycle_time_ns);
+    DPRINTF("[ECat_master] Start ecat_thread %llu ns\n", cycle_time_ns);
     ecat_thread_run = 1;
     pthread_create(&ecat_thread_id, &attr, ecat_thread, (void*)cycle_time_ns);
 
@@ -293,8 +293,8 @@ int iit::ecat::initialize(const char* ifname)
  * 
  * @return int expectedWKC
  */
-int iit::ecat::operational(const uint64_t* ecat_cycle_ns, 
-                           const uint64_t* ecat_cycle_shift_ns)
+int iit::ecat::operational(const uint32_t ecat_cycle_ns, 
+                           const uint32_t ecat_cycle_shift_ns)
 {
     struct timespec sleep_time;
 
@@ -303,11 +303,11 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
     }
 
     // Configure DC if ...
-    if ( *ecat_cycle_ns > 0 ) {
+    if ( ecat_cycle_ns > 0 ) {
         DPRINTF("[ECat_master] Configure DC\n");
         // Configure the distributed clocks for each slave.
         for ( int i = 1; i <= ec_slavecount; i++ ) {
-            ec_dcsync0(i, true, *ecat_cycle_ns, *ecat_cycle_shift_ns);
+            ec_dcsync0(i, true, ecat_cycle_ns, ecat_cycle_shift_ns);
         }
     }
 
@@ -330,15 +330,15 @@ int iit::ecat::operational(const uint64_t* ecat_cycle_ns,
     }
     
     // We are now in OP ...
-    sleep_time = { 0, 50000};
-    if ( *ecat_cycle_ns > 0 ) {
+    sleep_time = { 0, 50000}; // 50 us
+    if ( ecat_cycle_ns > 0 ) {
         // Update ec_DCtime so we can calculate stop time below.
         ecat_cycle();
         // Send a barrage of packets to set up the DC clock.
-        int64_t stoptime = ec_DCtime + *ecat_cycle_shift_ns;
-        //int64_t stoptime = ec_DCtime + 1e8L;
+        //int64_t stoptime = ec_DCtime + ecat_cycle_shift_ns;
+        int64_t stoptime = 3e9L;
         // SOEM automatically updates ec_DCtime.
-        //DPRINTF("[ECat_master] warm up .. fix to 100 ms\n");
+        DPRINTF("[ECat_master] warm up .. run ecat_cycle for 3 secs\n");
         while ( ec_DCtime < stoptime ) {
             ecat_cycle();
             clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
@@ -416,11 +416,6 @@ int iit::ecat::setExpectedSlaves(const SlavesMap& expectedSlaves)
 
 int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
 
-    if ( userSlaves == NULL ) {
-        DPRINTF("[ECat_master] FATAL: the expected-slaves map was not initialized.\n");
-        return -1;
-    }
-
     int ret;
     // Xenomai pthread_cond_timedwait()
     // The timeout abstime is expressed as an absolute value of the clock attribute passed to pthread_cond_init().
@@ -444,17 +439,20 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     // wkc > 0 ... check if wkc == expectedWKC
     ret = ec_timing.ecat_rx_wkc;
     
+    if ( userSlaves == NULL ) {
+        //DPRINTF("[ECat_master] WARN : the expected-slaves map was not initialized.\n");
+        return ret;
+    }
+    
     if ( ec_timing.ecat_rx_wkc != expectedWKC ) {
         DPRINTF("[ECat_master] WARN: wkc %d != %d expectedWKC\n", ec_timing.ecat_rx_wkc , expectedWKC);
         for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
             it->second->readErrReg();
         }
-        // ret > 0 but wkc != expectedWKC
-        return ret;
-    }
-    
-    for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-        it->second->readPDO();
+    } else {
+	for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
+	    it->second->readPDO();
+	}
     }
         
     // ret > 0 and wkc == expectedWKC
