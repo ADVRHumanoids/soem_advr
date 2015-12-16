@@ -72,7 +72,7 @@ int pre_operational(void);
 /**
  *
  */
-void finalize(void);
+void finalize(bool do_power_off=false);
 
 // return actual state
 int req_state_check(uint16 slave, uint16_t req_state);

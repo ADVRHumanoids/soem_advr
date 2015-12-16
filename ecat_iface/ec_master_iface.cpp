@@ -387,12 +387,14 @@ void iit::ecat::power_off() {
 
 }
 
-void iit::ecat::finalize(void) {
+void iit::ecat::finalize(bool do_power_off) {
 
     pre_operational();
 
     req_state_check(0, EC_STATE_INIT);
 
+    if ( do_power_off ) { power_off(); }
+    
     ec_close();
     DPRINTF("[ECat_master] close\n");
 
