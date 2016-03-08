@@ -323,9 +323,11 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
     }
 
     if ( userSlaves != 0 ) {
-        // reset error counter
         for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
+            // reset error counter
             it->second->resetError();
+            // initialize tx_pdo
+            it->second->writePDO();
         }
     }
     
@@ -335,10 +337,10 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
         // Update ec_DCtime so we can calculate stop time below.
         ecat_cycle();
         // Send a barrage of packets to set up the DC clock.
-        //int64_t stoptime = ec_DCtime + ecat_cycle_shift_ns;
-        int64_t stoptime = 3e9L;
+        int64_t stoptime = ec_DCtime + ecat_cycle_shift_ns;
+        //int64_t stoptime = 3e9L;
         // SOEM automatically updates ec_DCtime.
-        DPRINTF("[ECat_master] warm up .. run ecat_cycle for 3 secs\n");
+        DPRINTF("[ECat_master] warm up .. run ecat_cycle for %.2f secs\n", (float)(stoptime/1e9L) );
         while ( ec_DCtime < stoptime ) {
             ecat_cycle();
             clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
