@@ -80,19 +80,12 @@ int main(int argc, char **argv)
     rt_print_auto_init(1);
 #endif
 
-    char *      firmware_file = 0;
     int         expected_wkc;
-    //uint64_t    sync_cycle_time_ns = 1e6;     //  1ms
     uint32_t    sync_cycle_time_ns = 0;         //  no dc 
     uint32_t    sync_cycle_offset_ns = 0;       //  0ms
 
 
-    if ( argc > 1 ) {
-    } 
-    if ( argc > 2 ) {
-        firmware_file = argv[2];
-    }
-    if ( argc != 5) {
+    if ( ! ( argc == 5 || argc == 7 ) ) {
     printf("Usage: %s ifname slave_pos filename password\nifname = {eth0,rteth0}\n", argv[0]);
         return 0;
     }
@@ -102,11 +95,10 @@ int main(int argc, char **argv)
         return 0;
     }
 
-
     int slave_pos = atoi(argv[2]);
+    std::string bin_file((const char*)argv[3]);
     int password  = strtol(argv[4], 0, 16);
 
-    DPRINTF("%d %s 0x%04X\n", slave_pos, argv[3], password);
     // ask all slaves to go in INIT before update one
     req_state_check(0, EC_STATE_INIT);
     // first boot state request is handled by application that jump to bootloader
@@ -119,8 +111,15 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    send_file(slave_pos, argv[3], password);
-
+    DPRINTF("%d %s 0x%04X\n", slave_pos, bin_file.c_str(), password);
+    send_file(slave_pos, bin_file.c_str(), password);
+    if ( argc == 7 ) {
+        bin_file = (const char*)argv[5];
+        password  = strtol(argv[6], 0, 16);
+        DPRINTF("%d %s 0x%04X\n", slave_pos, bin_file.c_str(), password);
+        send_file(slave_pos, bin_file.c_str(), password);
+    }
+    
     req_state_check(slave_pos, EC_STATE_INIT);
 
     finalize();

@@ -1,35 +1,35 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(soem)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+include(MacroOptionalBuild)
+include(MacroSetcap)
 
-OPTION (BUILD_SHARED_LIBS "Build shared libraries." OFF)
+set(CMAKE_CXX_FLAGS     "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
+set(ENABLE_XENO         CACHE BOOL "OFF")
 
-#find_path(RTNET_INCLUDE_DIR NAMES rtnet.h HINTS /usr/local/rtnet/include )
-find_path(RTNET_INCLUDE_DIR NAMES rtnet.h PATH_SUFFIXES rtnet/include)
-#set(RTNET_INCLUDE_DIR "/usr/local/rtnet/include")
-set(ENABLE_RTNET  ON)
-
-if(ENABLE_RTNET AND RTNET_INCLUDE_DIR)
-  message("Found RTNET: ${RTNET_INCLUDE_DIR}")
-  include_directories(${RTNET_INCLUDE_DIR})
-  # try Xenomai
-  execute_process(COMMAND xeno-config --skin=posix --cflags OUTPUT_VARIABLE XENO_CFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process(COMMAND xeno-config --skin=posix --ldflags OUTPUT_VARIABLE XENO_LDFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${XENO_CFLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${XENO_CFLAGS}")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${XENO_LDFLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${XENO_LDFLAGS} -lnative")
+if ( ${ENABLE_XENO} )
+    find_package(Xenomai)
+    find_package(RTnet)
 endif()
 
+if ( Xenomai_FOUND )
+    set(LIB_TYPE _rt)
+else ()
+    set(LIB_TYPE _nrt)
+endif()
+
+
+
+option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 set(HEADER_INSTALL_ROOT /usr/local/include/ CACHE PATH "Where to install the headers")
 set(LIB_INSTALL_ROOT /usr/local/lib/ CACHE PATH "Where to install the libraries")
 
 ###########
 ## Build ##
 ###########
-set(SOEM_LIB_NAME soem)
-set(IIT_LIB_NAME iitecat_iface)
+set(SOEM_LIB_NAME soem${LIB_TYPE})
+set(IIT_LIB_NAME iitecat_iface${LIB_TYPE})
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -50,34 +50,42 @@ add_library(${SOEM_LIB_NAME}
   src/ethercatcoe.c
   src/ethercatbase.c
 )
-
+if ( Xenomai_FOUND )
+    set_xeno_flags(${SOEM_LIB_NAME})
+endif()
 target_link_libraries(${SOEM_LIB_NAME} pthread rt)
 
 
-add_executable(simple_test test/simple_test.c)
-add_executable(red_test test/red_test.c)
-add_executable(firm_update test/firm_update.c)
-add_executable(eepromtool test/eepromtool.c)
-add_executable(ebox test/ebox.c)
-add_executable(aliastool test/aliastool.c)
-add_executable(slaveinfo test/slaveinfo.c)
+#add_executable(simple_test test/simple_test.c)
+#add_executable(red_test test/red_test.c)
+#add_executable(firm_update test/firm_update.c)
+#add_executable(eepromtool test/eepromtool.c)
+#add_executable(ebox test/ebox.c)
+#add_executable(aliastool test/aliastool.c)
+#add_executable(slaveinfo test/slaveinfo.c)
 
-target_link_libraries(simple_test ${SOEM_LIB_NAME})
-target_link_libraries(red_test ${SOEM_LIB_NAME})
-target_link_libraries(firm_update ${SOEM_LIB_NAME})
-target_link_libraries(eepromtool ${SOEM_LIB_NAME})
-target_link_libraries(ebox ${SOEM_LIB_NAME})
-target_link_libraries(aliastool ${SOEM_LIB_NAME})
-target_link_libraries(slaveinfo ${SOEM_LIB_NAME})
+#target_link_libraries(simple_test ${SOEM_LIB_NAME})
+#target_link_libraries(red_test ${SOEM_LIB_NAME})
+#target_link_libraries(firm_update ${SOEM_LIB_NAME})
+#target_link_libraries(eepromtool ${SOEM_LIB_NAME})
+#target_link_libraries(ebox ${SOEM_LIB_NAME})
+#target_link_libraries(aliastool ${SOEM_LIB_NAME})
+#target_link_libraries(slaveinfo ${SOEM_LIB_NAME})
 
 
 add_library(${IIT_LIB_NAME}
   ecat_iface/slave_wrapper.cpp
   ecat_iface/ec_master_iface.cpp
-)	
+)
+if ( Xenomai_FOUND )
+    set_xeno_flags(${IIT_LIB_NAME})
+endif()
 target_link_libraries(${IIT_LIB_NAME} ${SOEM_LIB_NAME})
 
 add_executable(ec_iface_firm_update ecat_iface/ec_iface_firm_update.cpp)
+if ( Xenomai_FOUND )
+    set_xeno_flags(ec_iface_firm_update)
+endif()
 target_link_libraries(ec_iface_firm_update ${IIT_LIB_NAME})
 
 
