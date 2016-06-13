@@ -29,7 +29,7 @@
  */
 static uint8_t IOmap[4096];
 
-static int expectedWKC, g_wkc, ecat_thread_run; 
+static int expectedWKC, ecat_thread_run;
 
 static pthread_t        ecat_thread_id;
 static pthread_mutex_t  ecat_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -42,13 +42,10 @@ static iit::ecat::ec_timing_t ec_timing;
 static const iit::ecat::SlavesMap* userSlaves = NULL;
 
 
-static int ecat_cycle(void) {
-
-    int wkc;
+static int ecat_cycle(void)
+{
     ec_send_processdata();
-    wkc = ec_receive_processdata(EC_TIMEOUT_US);
-
-    return wkc;
+    return ec_receive_processdata(EC_TIMEOUT_US); // returns the working counter
 }
 
 
@@ -78,21 +75,20 @@ static void ec_sync(const int64_t reftime, const uint64_t cycletime , int64_t* o
 /* RT EtherCAT thread */
 void * ecat_thread( void* cycle_ns )
 {
-    struct timespec   ts, tleft;
-    struct timeval    tp;
+    struct timespec   ts;
     int rc;
     int ht;
     int wkc;
     uint64_t    cycle_time_ns;
-    uint64_t    t_prec, t_now;
+    uint64_t    t_prec=0, t_now;
     int64_t     toff;
     uint64_t    t_delta;
 
 #ifdef __XENO__
-    pthread_set_name_np(pthread_self(), "ecat");
+    pthread_set_name_np(pthread_self(), "iit-ecat-master");
     pthread_set_mode_np(0, PTHREAD_WARNSW);
 #else
-    pthread_setname_np(pthread_self(), "ecat");
+    pthread_setname_np(pthread_self(), "iit-ecat-master");
 #endif
 
 
@@ -110,6 +106,10 @@ void * ecat_thread( void* cycle_ns )
         add_timespec(&ts, cycle_time_ns + toff);
         /* wait to cycle start */
         rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, NULL);
+        if( rc != 0) {
+            char* errmsg = strerror(rc);
+            DPRINTF("[ECAT master][WARN] error in clock_nanosleep() in the Master thread: %s\n", errmsg);
+        }
 
         pthread_mutex_lock(&ecat_mutex);
         //wkc = ec_receive_processdata(EC_TIMEOUTRET);
@@ -137,10 +137,10 @@ void * ecat_thread( void* cycle_ns )
             pthread_mutex_unlock(&ecat_mux_sync);
 
         } else {
-            //DPRINTF("wkc %d\n", wkc);
+            //DPRINTF("wkc less than expected: %d\n", wkc);
         }
-
-    }    
+    }
+    return NULL;
 }
 
 
@@ -164,7 +164,7 @@ static void start_ecat_thread(const uint64_t* cycle_time_ns) {
     pthread_attr_init(&attr);
     pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     pthread_attr_setschedpolicy(&attr, policy);
-    schedparam.sched_priority = sched_get_priority_max(policy);
+    schedparam.sched_priority = sched_get_priority_max(policy)-3;
     pthread_attr_setschedparam(&attr, &schedparam);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     pthread_attr_setaffinity_np(&attr, sizeof(cpu_set), &cpu_set);
@@ -178,7 +178,6 @@ static void start_ecat_thread(const uint64_t* cycle_time_ns) {
 bool req_state_check(uint16 slave, uint16_t req_state) {
 
     uint16_t act_state;
-    uint16_t ec_error_mask = 0x10;
     uint16_t ec_state_mask = 0x0F;
 
     if ( slave == 0 ) {
@@ -190,7 +189,7 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
     ec_slave[slave].state = req_state;
     ec_writestate(slave);
     // just check req_state ... no error indication bit is check
-    act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 5); 
+    act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE);
 
     if ( req_state != act_state ) {
         // not all slave reached requested state ... find who and check error indication bit
@@ -202,33 +201,29 @@ bool req_state_check(uint16 slave, uint16_t req_state) {
                 if ( ec_slave[i].state != req_state ) {
                     DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                             i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
-                    //if ( ec_slave[i].state & ec_error_mask ) {
                         // attemping to ack
                         ec_slave[i].state = (req_state & ec_state_mask) + EC_STATE_ACK;
                         ec_writestate(i);
-                        act_state = ec_statecheck(i, req_state,  EC_TIMEOUTSTATE * 5); 
+                        act_state = ec_statecheck(i, req_state,  EC_TIMEOUTSTATE);
                         if ( req_state != act_state ) {
                             // still req_state not reached ...
                             DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                                     i, ec_slave[i].state, ec_slave[i].ALstatuscode, ec_ALstatuscode2string(ec_slave[i].ALstatuscode));
                         }
-                    //}
                 }
             }
         } else {
             DPRINTF("Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                     slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
-            //if ( ec_slave[slave].state & ec_error_mask ) {
                 // attemping to ack
                 ec_slave[slave].state = (req_state & ec_state_mask) + EC_STATE_ACK;
                 ec_writestate(slave);
-                act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE * 5); 
+                act_state = ec_statecheck(slave, req_state,  EC_TIMEOUTSTATE);
                 if ( req_state != act_state ) {
                     // still req_state not reached ...
                     DPRINTF("... Slave %d State=0x%02X StatusCode=0x%04X : %s\n",
                             slave, ec_slave[slave].state, ec_slave[slave].ALstatuscode, ec_ALstatuscode2string(ec_slave[slave].ALstatuscode));
                 }
-            //}
         }
 
     }
@@ -347,8 +342,8 @@ void iit::ecat::finalize(void) {
 int iit::ecat::setExpectedSlaves(const SlavesMap& expectedSlaves)
 {
     int ret = 0;
-    if ( ec_slavecount != expectedSlaves.size() ) {
-        DPRINTF("[ECat_master] WARNING: expected %d slaves, %d found.\n",
+    if ( static_cast<unsigned int>(ec_slavecount) != expectedSlaves.size() ) {
+        DPRINTF("[ECAT master][WARN] expected %d slaves, %d found.\n",
                 expectedSlaves.size(), ec_slavecount);
         ret = 1;
     }
@@ -371,40 +366,45 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     // By default, CLOCK_REALTIME is used.
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec = ts.tv_sec + 1;
+    ts.tv_nsec += 2E6;
 
-    pthread_mutex_lock(&ecat_mux_sync);
+    ret = pthread_mutex_lock(&ecat_mux_sync);
+    if(ret != 0) {
+        char* errmsg = strerror(ret);
+        DPRINTF("[ECAT master][WARN] recv_from_slaves() - pthread_mutex_lock() : %s\n", errmsg);
+    }
     ret = pthread_cond_timedwait(&ecat_cond, &ecat_mux_sync, &ts);
-    pthread_mutex_unlock(&ecat_mux_sync);
+    if(ret != 0) {
+        char* errmsg = strerror(ret);
+        DPRINTF("[ECAT master][WARN] recv_from_slaves() - pthread_cond_timedwait() : %s\n", errmsg);
+    }
+    ret = pthread_mutex_unlock(&ecat_mux_sync);
+    if(ret != 0) {
+        char* errmsg = strerror(ret);
+        DPRINTF("[ECAT master][WARN] recv_from_slaves() - pthread_mutex_unlock() : %s\n", errmsg);
+    }
 
-    *timing = ec_timing;
-
-    //ret 0 on success,
-    if ( ! ret ) {
+    //ret is 0 on success
+    if(ret == 0) {
+        pthread_mutex_lock(&ecat_mutex);
         for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
             it->second->readPDO();
         }
+        pthread_mutex_unlock(&ecat_mutex);
     }
+    *timing = ec_timing;
 
-    // ret < 0 on error
     return ret;
 }
 
 int iit::ecat::send_to_slaves(void) {
-
-    int wkc;
-
+    pthread_mutex_lock(&ecat_mutex);
     for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
         it->second->writePDO();
     }
-
-    pthread_mutex_lock(&ecat_mutex);
-    //ec_send_processdata();
-    wkc = ecat_cycle();
     pthread_mutex_unlock(&ecat_mutex);
 
-    return wkc;
-
+    return expectedWKC;
 }
 
 int iit::ecat::update_slave_firmware(uint16_t slave, std::string firmware, uint32_t passwd_firm) {

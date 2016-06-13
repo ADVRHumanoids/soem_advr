@@ -8,6 +8,8 @@
 #ifndef IIT_IO_ECAT_SLAVE_WRAPPER_H_
 #define IIT_IO_ECAT_SLAVE_WRAPPER_H_
 
+#include <iit/ecat/utils.h> // rt_printf
+
 #include <soem-1.3.0/ethercattype.h>
 #include <soem-1.3.0/nicdrv.h>
 #include <soem-1.3.0/ethercatbase.h>
@@ -18,6 +20,7 @@
 #include <soem-1.3.0/ethercatconfig.h>
 #include <soem-1.3.0/ethercatprint.h>
 
+#include <cstring> // for memcpy()
 
 namespace iit {
 namespace ecat {
@@ -65,9 +68,7 @@ public:
     typedef typename ESCTypes::pdo_rx pdo_rx_t;
     typedef typename ESCTypes::pdo_tx pdo_tx_t;
 public:
-    BasicEscWrapper(const ec_slavet& slave_descriptor) :
-        EscWrapper(slave_descriptor)
-    {}
+    BasicEscWrapper(const ec_slavet& slave_descriptor);
 
     void readPDO();
     void writePDO();
@@ -86,6 +87,20 @@ protected:
 #define TEMPL template<class ESCTypes>
 #define CLASS BasicEscWrapper<ESCTypes>
 #define SIGNATURE(type) TEMPL inline type CLASS
+
+
+SIGNATURE()::BasicEscWrapper(const ec_slavet& slave_descriptor) :
+    ecat::EscWrapper(slave_descriptor)
+{
+    if(nbytes_in != sizeof(pdo_rx_t)) {
+        DPRINTF("[ESCWrapper][WARN]: slave %d: detected RX-PDO size (%d) not as expected (%d)\n",
+                position, nbytes_in, sizeof(pdo_rx_t));
+    }
+    if(nbytes_out != sizeof(pdo_tx_t)) {
+        DPRINTF("[ESCWrapper][WARN]: slave %d: detected TX-PDO size (%d) not as expected (%d)\n",
+                position, nbytes_out, sizeof(pdo_tx_t));
+    }
+}
 
 
 SIGNATURE(void)::readPDO()

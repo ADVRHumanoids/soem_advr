@@ -1,14 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(soem)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O3")
 
 OPTION (BUILD_SHARED_LIBS "Build shared libraries." OFF)
 
-#find_path(RTNET_INCLUDE_DIR NAMES rtnet.h HINTS /usr/local/rtnet/include )
 find_path(RTNET_INCLUDE_DIR NAMES rtnet.h PATH_SUFFIXES rtnet/include)
-#set(RTNET_INCLUDE_DIR "/usr/local/rtnet/include")
-set(ENABLE_RTNET  ON)
+option(ENABLE_RTNET "Use RTNet" ON)
 
 if(ENABLE_RTNET AND RTNET_INCLUDE_DIR)
   message("Found RTNET: ${RTNET_INCLUDE_DIR}")
