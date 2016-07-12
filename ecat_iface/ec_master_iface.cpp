@@ -96,8 +96,6 @@ void * ecat_thread( void* cycle_ns )
     pthread_setname_np(pthread_self(), "ecat");
 #endif
 
-
-    //rc = pthread_mutex_lock(&mutex);
     rc = clock_gettime(CLOCK_MONOTONIC, &ts);
     ht = (ts.tv_nsec / 1000000) + 1; /* round to nearest ms */
     ts.tv_nsec = ht * 1000000;
@@ -145,7 +143,7 @@ void * ecat_thread( void* cycle_ns )
         } else {
             //DPRINTF("wkc %d\n", wkc);
         }
-
+        
     }  
       
     DPRINTF("[ECat_master] ecat thread exit clean !!!\n");
@@ -451,10 +449,10 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
         for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
             it->second->readErrReg();
         }
-    } else {
-	for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-	    it->second->readPDO();
-	}
+    } else { 
+        for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
+            it->second->readPDO();
+        }
     }
         
     // ret > 0 and wkc == expectedWKC
@@ -463,7 +461,7 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
 
 int iit::ecat::send_to_slaves(void) {
 
-    int wkc;
+    int ret;
 
     pthread_mutex_lock(&ecat_mutex);
     
@@ -471,12 +469,12 @@ int iit::ecat::send_to_slaves(void) {
         it->second->writePDO();
     }
 
-    //pthread_mutex_lock(&ecat_mutex);
-    wkc = ec_send_processdata();
-    //wkc = ecat_cycle();
+    // >0 if processdata is transmitted
+    ret = ec_send_processdata();
+    //ret = 1;
     pthread_mutex_unlock(&ecat_mutex);
 
-    return wkc;
+    return ret;
 
 }
 

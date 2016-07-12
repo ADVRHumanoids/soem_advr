@@ -55,22 +55,8 @@ if ( Xenomai_FOUND )
 endif()
 target_link_libraries(${SOEM_LIB_NAME} pthread rt)
 
-
 #add_executable(simple_test test/simple_test.c)
-#add_executable(red_test test/red_test.c)
-#add_executable(firm_update test/firm_update.c)
-#add_executable(eepromtool test/eepromtool.c)
-#add_executable(ebox test/ebox.c)
-#add_executable(aliastool test/aliastool.c)
-#add_executable(slaveinfo test/slaveinfo.c)
-
 #target_link_libraries(simple_test ${SOEM_LIB_NAME})
-#target_link_libraries(red_test ${SOEM_LIB_NAME})
-#target_link_libraries(firm_update ${SOEM_LIB_NAME})
-#target_link_libraries(eepromtool ${SOEM_LIB_NAME})
-#target_link_libraries(ebox ${SOEM_LIB_NAME})
-#target_link_libraries(aliastool ${SOEM_LIB_NAME})
-#target_link_libraries(slaveinfo ${SOEM_LIB_NAME})
 
 
 add_library(${IIT_LIB_NAME}

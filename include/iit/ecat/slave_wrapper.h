@@ -233,24 +233,16 @@ public:
     BasicEscWrapper(const ec_slavet& slave_descriptor) :
     EscWrapper(slave_descriptor) {
 
-        char err_msg[256];
-
         int actual_state = ec_statecheck(position,EC_STATE_PRE_OP, EC_TIMEOUTSTATE);
 
 //         if ( actual_state != EC_STATE_INIT && actual_state != EC_STATE_BOOT ) {
-//                  
-//             if ( nbytes_in  != sizeof(pdo_rx_t) ) {
-//                 snprintf(err_msg, sizeof(err_msg), "nbytes_in %d != %d pdo_rx_t", nbytes_in, sizeof(pdo_rx_t));
-//                 throw EscWrpError(EC_WRP_PDO_RX_SIZE, err_msg);
-//             }
-//             if ( nbytes_out != sizeof(pdo_tx_t) ) {
-//                 snprintf(err_msg, sizeof(err_msg), "nbytes_out %d != %d pdo_tx_t", nbytes_out, sizeof(pdo_tx_t));
-//                 throw EscWrpError(EC_WRP_PDO_TX_SIZE, err_msg);
-//             }
+//             check_pdo_size();
 //         }
 
     }
 
+    void check_pdo_size(void);
+    
     void init_sdo_lookup(void);
 
     const objd_t * getSDObjd(const char * name);
@@ -299,6 +291,21 @@ private:
 #define TEMPL template<class EscPDOTypes, class EscSDOTypes>
 #define CLASS BasicEscWrapper<EscPDOTypes,EscSDOTypes>
 #define SIGNATURE(type) TEMPL inline type CLASS
+
+SIGNATURE(void)::check_pdo_size() {
+    
+    char err_msg[256];
+
+    if ( nbytes_in  != sizeof(pdo_rx_t) ) {
+        snprintf(err_msg, sizeof(err_msg), "nbytes_in %d != %d pdo_rx_t", nbytes_in, sizeof(pdo_rx_t));
+        throw EscWrpError(EC_WRP_PDO_RX_SIZE, err_msg);
+    }
+    if ( nbytes_out != sizeof(pdo_tx_t) ) {
+        snprintf(err_msg, sizeof(err_msg), "nbytes_out %d != %d pdo_tx_t", nbytes_out, sizeof(pdo_tx_t));
+        throw EscWrpError(EC_WRP_PDO_TX_SIZE, err_msg);
+    }
+    DPRINTF("check_pdo_size ... Ok\n");
+}
 
 
 SIGNATURE(void)::readPDO() {
