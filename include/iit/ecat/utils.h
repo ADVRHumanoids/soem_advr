@@ -13,7 +13,6 @@
 
 #include <fstream>
 #include <sstream>
-#include <boost/format.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/count.hpp>
@@ -24,19 +23,19 @@
 #include <boost/accumulators/statistics/error_of.hpp>
 #include <boost/accumulators/statistics/error_of_mean.hpp>
 
-using namespace boost::accumulators;
+namespace b_acc = boost::accumulators;
 
 namespace iit {
 namespace ecat {
     
-typedef accumulator_set<uint64_t,
-        features<
-             tag::count
-            ,tag::mean
-            ,tag::min
-            ,tag::max
-            ,tag::variance(lazy)
-            ,tag::error_of<tag::mean>
+typedef b_acc::accumulator_set<uint64_t,
+        b_acc::features<
+             b_acc::tag::count
+            ,b_acc::tag::mean
+            ,b_acc::tag::min
+            ,b_acc::tag::max
+            ,b_acc::tag::variance(b_acc::lazy)
+            ,b_acc::tag::error_of<b_acc::tag::mean>
         >
     > stat_t;
 
@@ -44,13 +43,13 @@ inline void print_stat(stat_t &s) {
 
     std::ostringstream oss;
 
-    if (count(s) > 0) {
-        oss << "\tCount " << count(s) << std::endl;
-        oss << "\tMean " << (uint64_t)mean(s);
-        oss << "\tMin " << min(s);
-        oss << "\tMax " << max(s);
-        oss << "\tVar " << variance(s);
-        oss << "\tErrOfMean " << error_of<tag::mean>(s);
+    if (b_acc::count(s) > 0) {
+        oss << "\tCount " << b_acc::count(s) << std::endl;
+        oss << "\tMean " << (uint64_t)b_acc::mean(s);
+        oss << "\tMin " << b_acc::min(s);
+        oss << "\tMax " << b_acc::max(s);
+        oss << "\tVar " << b_acc::variance(s);
+        oss << "\tErrOfMean " << b_acc::error_of<b_acc::tag::mean>(s);
         oss << std::endl;
     } else {
         oss << "No data ..." << std::endl;
