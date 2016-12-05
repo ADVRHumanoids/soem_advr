@@ -18,7 +18,7 @@
 #include <soem-1.3.0/ethercatconfig.h>
 #include <soem-1.3.0/ethercatprint.h>
 
-#include <string>
+#include <string.h>
 #include <map>
 #include <exception>
 
