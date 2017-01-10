@@ -494,11 +494,35 @@ int iit::ecat::send_file(uint16_t slave, std::string filename, uint32_t passwd_f
         char * err =  ec_elist2string();
         DPRINTF("Ec_error : %s\n", err);
         DPRINTF("Fail with code %d\n", result);
+        return result;
     }
 
     return result;
 }
 
+int iit::ecat::recv_file(uint16_t slave, std::string filename, uint32_t passwd_firm, uint32_t byte_count, std::string save_as) {
+
+    int result;
+    char * base;
+    int file_size = byte_count;
+
+    std::string file_buff(file_size, 0);
+
+    base = basename((char*)filename.c_str());
+    result = ec_FOEread(slave, base, passwd_firm, &file_size ,(void*)file_buff.c_str(), EC_TIMEOUTSTATE*10);
+    if ( result <= 0 ) {
+        char * err =  ec_elist2string();
+        DPRINTF("Ec_error : %s\n", err);
+        DPRINTF("Fail with code %d\n", result);
+        return result;
+    }
+
+    DPRINTF("Recv file OK, , %d bytes.\n",file_buff.length());
+    std::ofstream file_stream(save_as, std::ofstream::out);
+    file_stream << file_buff;
+    file_stream.close();
+    return result;
+}
 
 #if 0
 

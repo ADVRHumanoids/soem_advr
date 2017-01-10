@@ -190,6 +190,7 @@ public:
     virtual const objd_t * get_SDOs(void) = 0;
 
     virtual uint16_t get_ESC_type(void) = 0;
+    virtual int16_t get_robot_id() { return -1; }
 
     //const uint8_t* getRawData(void) const;
 
@@ -235,13 +236,13 @@ public:
 
         int actual_state = ec_statecheck(position,EC_STATE_PRE_OP, EC_TIMEOUTSTATE);
 
-//         if ( actual_state != EC_STATE_INIT && actual_state != EC_STATE_BOOT ) {
-//             check_pdo_size();
-//         }
+//          if ( actual_state != EC_STATE_INIT && actual_state != EC_STATE_BOOT ) {
+//              check_pdo_size();
+//          }
 
     }
 
-    void check_pdo_size(void);
+    void _check_pdo_size(void);
     
     void init_sdo_lookup(void);
 
@@ -292,7 +293,7 @@ private:
 #define CLASS BasicEscWrapper<EscPDOTypes,EscSDOTypes>
 #define SIGNATURE(type) TEMPL inline type CLASS
 
-SIGNATURE(void)::check_pdo_size() {
+SIGNATURE(void)::_check_pdo_size() {
     
     char err_msg[256];
 

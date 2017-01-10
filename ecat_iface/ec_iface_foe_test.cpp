@@ -8,9 +8,6 @@
 #endif
 
 #include <iit/ecat/ec_master_iface.h>
-//#include <iit/ecat/ec_slave_type.h>
-//#include <iit/ecat/slave_wrapper.h>
-
 
 
 static int run_loop = 1;
@@ -69,7 +66,6 @@ int main(int argc, char **argv)
     set_signal_handler();
 
 #ifdef __XENO__
-    
     int policy = SCHED_FIFO;
     struct sched_param  schedparam;
     schedparam.sched_priority = sched_get_priority_max(policy);
@@ -95,8 +91,8 @@ int main(int argc, char **argv)
     uint32_t    sync_cycle_offset_ns = 0;       //  0ms
 
 
-    if ( ! ( argc == 5 || argc == 7 ) ) {
-    printf("Usage: %s ifname slave_pos filename password\nifname = {eth0,rteth0}\n", argv[0]);
+    if ( ! ( argc == 7 ) ) {
+    printf("Usage: %s ifname slave_pos filename password size_bytes save_as\nifname = {eth0,rteth0}\n", argv[0]);
         return 0;
     }
 
@@ -108,9 +104,13 @@ int main(int argc, char **argv)
     int slave_pos = atoi(argv[2]);
     std::string bin_file((const char*)argv[3]);
     int password  = strtol(argv[4], 0, 16);
-
+    int file_size  = atoi(argv[5]);
+    std::string save_as((const char*)argv[6]);
+    
+    //power off 
     esc_gpio_ll_wr ( 0x1000+slave_pos, 0x0 );
     sleep(1);
+    // power on + boot
     esc_gpio_ll_wr ( 0x1000+slave_pos, 0x5 );
     
     // ask all slaves to go in INIT before update one
@@ -125,27 +125,17 @@ int main(int argc, char **argv)
         return 0;
     }
     
-    //uint16_t flash_cmd = 0x00E1;
-    //ec_SDOwrite ( slave_pos, 0x8000, 0x1, false, sizeof ( flash_cmd ), &flash_cmd, EC_TIMEOUTRXM * 30 ); // 21 secs
-    //sleep(1);
 
-    DPRINTF("%d %s 0x%04X\n", slave_pos, bin_file.c_str(), password);
-    send_file(slave_pos, bin_file.c_str(), password);
-    if ( argc == 7 ) {
-        bin_file = (const char*)argv[5];
-        password  = strtol(argv[6], 0, 16);
-        DPRINTF("%d %s 0x%04X\n", slave_pos, bin_file.c_str(), password);
-        send_file(slave_pos, bin_file.c_str(), password);
-    }
-    
+    //DPRINTF("recv %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
+    //recv_file(slave_pos, bin_file, password, file_size, save_as);
+
+    DPRINTF("send %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
+    send_file(slave_pos, bin_file, password);
+
     req_state_check(slave_pos, EC_STATE_INIT);
 
     finalize();
 
-
-    initialize(argv[1]);
-    expected_wkc = operational(sync_cycle_time_ns, sync_cycle_offset_ns);
-    finalize();
 
     return 0;
 }
