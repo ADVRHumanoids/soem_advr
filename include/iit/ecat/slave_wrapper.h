@@ -18,7 +18,7 @@
 #include <soem-1.3.0/ethercatconfig.h>
 #include <soem-1.3.0/ethercatprint.h>
 
-#include <string>
+#include <cstring>
 #include <map>
 #include <exception>
 
@@ -310,13 +310,13 @@ SIGNATURE(void)::_check_pdo_size() {
 
 
 SIGNATURE(void)::readPDO() {
-    memcpy((void*)&rx_pdo, inputs, nbytes_in);
+    std::memcpy((void*)&rx_pdo, inputs, nbytes_in);
     on_readPDO();
 }
 
 SIGNATURE(void)::writePDO() {
     on_writePDO();
-    memcpy((void*)outputs, &tx_pdo, nbytes_out);
+    std::memcpy((void*)outputs, &tx_pdo, nbytes_out);
 }
 
 SIGNATURE(const typename CLASS::pdo_rx_t&)::getRxPDO() const {
