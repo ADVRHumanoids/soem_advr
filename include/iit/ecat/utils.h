@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-#ifdef __XENO__
-    #include <rtdk.h>
-    #define DPRINTF rt_printf
+#ifdef __COBALT__
+//    #include <rtdk.h>
+    #define DPRINTF printf
 #else
     #include <stdio.h>
     #define DPRINTF printf

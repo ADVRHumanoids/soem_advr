@@ -65,8 +65,9 @@
  * This layer if fully transparent for the higher layers.
  */
 
-#ifdef __XENO__
-    #include <rtnet.h>
+#ifdef __COBALT__
+    #include <rtdm/rtdm.h>
+    //#include <rtnet.h>
 #endif
 
 #include <sys/types.h>
@@ -123,7 +124,7 @@ int ecx_setupnic(ecx_portt *port, const char *ifname, int secondary)
 {
    int i;
    int r, rval, ifindex;
-#ifdef __XENO__
+#ifdef __COBALT__
    int64_t timeout_ns;
 #else
    struct timeval timeout;
@@ -175,12 +176,11 @@ int ecx_setupnic(ecx_portt *port, const char *ifname, int secondary)
    }   
    /* we use RAW packet socket, with packet type ETH_P_ECAT */
    *psock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ECAT));
-   printf("psock %d\n", *psock
-          );
-#ifdef __XENO__
-   timeout_ns = 10000LL;
-   if ( ioctl(*psock, RTNET_RTIOC_TIMEOUT, &timeout_ns) < 0 )
-        printf("ioctl RTNET_RTIOC_TIMEOUT failed\n");
+   printf("psock %d\n", *psock);
+#ifdef __COBALT__
+//    timeout_ns = 10000LL;
+//    if ( ioctl(*psock, RTNET_RTIOC_TIMEOUT, &timeout_ns) < 0 )
+//         printf("ioctl RTNET_RTIOC_TIMEOUT failed\n");
 #else
    timeout.tv_sec =  0;
    timeout.tv_usec = 1;

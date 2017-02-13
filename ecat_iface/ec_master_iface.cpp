@@ -89,9 +89,9 @@ void * ecat_thread( void* cycle_ns )
     int64_t     toff;
     uint64_t    t_delta;
 
-#ifdef __XENO__
-    pthread_set_name_np(pthread_self(), "ecat");
-    pthread_set_mode_np(0, PTHREAD_WARNSW);
+#ifdef __COBALT__
+    pthread_setname_np(pthread_self(), "ecat");
+    pthread_setmode_np(0, PTHREAD_WARNSW, 0);
 #else
     pthread_setname_np(pthread_self(), "ecat");
 #endif
@@ -160,7 +160,7 @@ static void start_ecat_thread(const uint32_t cycle_time_ns) {
     struct sched_param  schedparam;
 
 
-#ifdef __XENO__
+#ifdef __COBALT__
     policy = SCHED_FIFO;
 #else
     policy = SCHED_OTHER;

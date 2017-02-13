@@ -14,10 +14,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <pthread.h>
-#ifdef __XENO__
+#ifdef __COBALT__
     #include <sys/mman.h>
-    #include <rtdk.h>
-    #define printf rt_printf
+    #include <xenomai/init.h>
 #endif
 #include <signal.h>
 #include <execinfo.h>
@@ -221,7 +220,7 @@ static void warn_upon_switch(int sig __attribute__((unused)))
 
 static void set_signal_handler(void)
 {
-#ifdef __XENO__
+#ifdef __COBALT__
     // call pthread_set_mode_np(0, PTHREAD_WARNSW) to cause a SIGXCPU
     // signal to be sent when the calling thread involontary switches to secondary mode
     signal(SIGXCPU, warn_upon_switch);
@@ -230,9 +229,9 @@ static void set_signal_handler(void)
 
 
 
-#ifdef __XENO__
+#ifdef __COBALT__
 
-int main(int argc, char *argv[])
+int main(int argc, char * const argv[])
 {
     int iret1;
     pthread_attr_t      attr;
@@ -240,7 +239,8 @@ int main(int argc, char *argv[])
     cpu_set_t           cpu_set;
     struct sched_param  schedparam;
 
-
+    xenomai_init(&argc, &argv);
+    
     policy = SCHED_FIFO;
 
     CPU_ZERO(&cpu_set);
@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
 
     mlockall(MCL_CURRENT | MCL_FUTURE);
 
-    printf("SOEM (Simple Open EtherCAT Master)\nSimple test\n");
+    printf("+++ XENO SOEM +++\n (Simple Open EtherCAT Master)\nSimple test\n");
 
     if ( argc > 1 ) {
 

@@ -16,7 +16,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <pthread.h>
-#ifdef __XENO__
+#ifdef __COBALT__
     #include <sys/mman.h>
     #include <rtdk.h>
     #define printf rt_printf
@@ -602,7 +602,7 @@ static void warn_upon_switch(int sig __attribute__((unused)))
 
 static void set_signal_handler(void)
 {
-#ifdef __XENO__
+#ifdef __COBALT__
     // call pthread_set_mode_np(0, PTHREAD_WARNSW) to cause a SIGXCPU
     // signal to be sent when the calling thread involontary switches to secondary mode
     signal(SIGXCPU, warn_upon_switch);
@@ -611,7 +611,7 @@ static void set_signal_handler(void)
 
 
 
-#ifdef __XENO__
+#ifdef __COBALT__
 
 int main(int argc, char *argv[])
 {

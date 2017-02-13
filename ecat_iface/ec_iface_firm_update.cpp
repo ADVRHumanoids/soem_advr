@@ -3,8 +3,8 @@
 #include <execinfo.h>
 #include <stdio.h>
 
-#ifdef __XENO__
-    #include <rtdk.h>
+#ifdef __COBALT__
+//    #include <rtdk.h>
 #endif
 
 #include <iit/ecat/ec_master_iface.h>
@@ -39,7 +39,7 @@ static void set_signal_handler(void)
     signal(SIGINT, shutdown);
     signal(SIGINT, shutdown);
     signal(SIGKILL, shutdown);
-#ifdef __XENO__
+#ifdef __COBALT__
     // call pthread_set_mode_np(0, PTHREAD_WARNSW) to cause a SIGXCPU
     // signal to be sent when the calling thread involontary switches to secondary mode
     signal(SIGXCPU, warn_upon_switch);
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 
     set_signal_handler();
 
-#ifdef __XENO__
+#ifdef __COBALT__
     
     int policy = SCHED_FIFO;
     struct sched_param  schedparam;
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
      * any transition to secondary (i.e. non real-time) mode when
      * writing output.
      */
-    rt_print_auto_init(1);
+//    rt_print_auto_init(1);
 #endif
 
     int         expected_wkc;

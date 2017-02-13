@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <time.h>
 
-#ifdef __XENO__
+#ifdef __COBALT__
     #include <sys/mman.h>
     #include <rtdk.h>
     #define printf rt_printf

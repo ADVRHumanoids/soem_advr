@@ -10,7 +10,6 @@ set(ENABLE_XENO         CACHE BOOL "OFF")
 
 if ( ${ENABLE_XENO} )
     find_package(Xenomai)
-    find_package(RTnet)
 endif()
 
 if ( Xenomai_FOUND )
@@ -55,8 +54,11 @@ if ( Xenomai_FOUND )
 endif()
 target_link_libraries(${SOEM_LIB_NAME} pthread rt)
 
-#add_executable(simple_test test/simple_test.c)
-#target_link_libraries(simple_test ${SOEM_LIB_NAME})
+add_executable(simple_test test/simple_test.c)
+if ( Xenomai_FOUND )
+    set_xeno_flags(simple_test)
+endif()
+target_link_libraries(simple_test ${SOEM_LIB_NAME})
 
 
 add_library(${IIT_LIB_NAME}
