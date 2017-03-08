@@ -244,7 +244,7 @@ public:
 
     void _check_pdo_size(void);
     
-    void init_sdo_lookup(void);
+    void init_sdo_lookup(bool doReadSDO = false);
 
     const objd_t * getSDObjd(const char * name);
 
@@ -332,15 +332,17 @@ SIGNATURE(void)::setTxPDO(const pdo_tx_t& tx) {
     tx_pdo = tx;
 }
 
-SIGNATURE(void)::init_sdo_lookup(void) {
+SIGNATURE(void)::init_sdo_lookup(bool doReadSDO) {
 
     const objd_t * sdo = get_SDOs();
     while ( sdo && sdo->index ) {
         sdo_look_up[sdo->name] = sdo;
-//         if ( readSDO(sdo) != EC_WRP_OK) {
-//             // raise EscWrpError or IGNORE and continue ?!?!?
-//             throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
-//         }
+        if ( doReadSDO ) {
+            if ( readSDO(sdo) != EC_WRP_OK) {
+                // raise EscWrpError or IGNORE and continue ?!?!?
+                throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
+            }
+        }
         sdo ++;
     }
 }
