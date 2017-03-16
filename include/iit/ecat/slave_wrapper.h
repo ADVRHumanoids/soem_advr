@@ -244,16 +244,22 @@ public:
 
     void _check_pdo_size(void);
     
-    void init_sdo_lookup(void);
+    void init_sdo_lookup(bool doReadSDO = false);
 
     const objd_t * getSDObjd(const char * name);
+    const objd_t * getSDObjd(const std::string name);
 
     template<typename T>
     int writeSDO_byname(const char * name, T t);
+    template<typename T>
+    int writeSDO_byname(const std::string name, T t);
 
     template<typename T>
     int readSDO_byname(const char * name, T &t);
     int readSDO_byname(const char * name);
+    template<typename T>
+    int readSDO_byname(const std::string name, T &t);
+    int readSDO_byname(const std::string name);
 
     //template<typename T>
     //int getSDO_byname(const char * name, T &t);
@@ -332,15 +338,17 @@ SIGNATURE(void)::setTxPDO(const pdo_tx_t& tx) {
     tx_pdo = tx;
 }
 
-SIGNATURE(void)::init_sdo_lookup(void) {
+SIGNATURE(void)::init_sdo_lookup(bool doReadSDO) {
 
     const objd_t * sdo = get_SDOs();
     while ( sdo && sdo->index ) {
         sdo_look_up[sdo->name] = sdo;
-//         if ( readSDO(sdo) != EC_WRP_OK) {
-//             // raise EscWrpError or IGNORE and continue ?!?!?
-//             throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
-//         }
+        if ( doReadSDO ) {
+            if ( readSDO(sdo) != EC_WRP_OK) {
+                // raise EscWrpError or IGNORE and continue ?!?!?
+                throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
+            }
+        }
         sdo ++;
     }
 }
@@ -353,6 +361,9 @@ SIGNATURE(const objd_t *)::getSDObjd(const char * name) {
         throw EscWrpError(EC_WRP_SDO_NOTEXIST, name);
     }
     return sdo;
+}
+SIGNATURE(const objd_t *)::getSDObjd(const std::string name) {
+    return getSDObjd(name.c_str());
 }
 
 TEMPL
@@ -380,6 +391,11 @@ inline int CLASS::writeSDO_byname(const char * name, const T t) {
     }
 
     return EC_WRP_OK;
+}
+TEMPL
+template<typename T>
+inline int CLASS::writeSDO_byname(const std::string name, const T t) {
+    return writeSDO_byname(name.c_str(), t);
 }
 
 // TEMPL
@@ -420,6 +436,11 @@ inline int CLASS::readSDO_byname(const char * name, T &t) {
 
     return EC_WRP_OK;  
 }
+TEMPL
+template<typename T>
+inline int CLASS::readSDO_byname(const std::string name, T &t) {
+    return readSDO_byname(name.c_str(), t);
+}
 
 SIGNATURE(int)::readSDO_byname(const char * name) {
 
@@ -432,6 +453,9 @@ SIGNATURE(int)::readSDO_byname(const char * name) {
     }
 
     return EC_WRP_OK;  
+}
+SIGNATURE(int)::readSDO_byname(const std::string name) {
+    return readSDO_byname(name.c_str());
 }
 
 SIGNATURE(int)::writeSDO(const objd_t *sdo) {
