@@ -40,17 +40,7 @@ static pthread_cond_t   ecat_cond = PTHREAD_COND_INITIALIZER;
 
 static iit::ecat::ec_timing_t ec_timing;
 
-static const iit::ecat::SlavesMap* userSlaves = NULL;
-
-
-static int ecat_cycle(void) {
-
-    int wkc;
-    ec_send_processdata();
-    wkc = ec_receive_processdata(EC_TIMEOUT_US);
-
-    return wkc;
-}
+static iit::ecat::SlavesMap userSlaves;
 
 
 
@@ -74,6 +64,15 @@ static void ec_sync(const int64_t reftime, const uint64_t cycletime , int64_t* o
     }
     *offsettime = -(delta / 100) - (integral / 20);
 
+}
+
+int iit::ecat::ecat_cycle(void) {
+
+    int wkc;
+    ec_send_processdata();
+    wkc = ec_receive_processdata(EC_TIMEOUT_US);
+
+    return wkc;
 }
 
 /* RT EtherCAT thread */
@@ -114,8 +113,8 @@ void * ecat_thread( void* cycle_ns )
         rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, NULL);
 
         pthread_mutex_lock(&ecat_mutex);
-        //wkc = ec_receive_processdata(EC_TIMEOUTRET);
-        wkc = ecat_cycle();
+        wkc = iit::ecat::ecat_cycle();
+        //wkc = 1;
         pthread_mutex_unlock(&ecat_mutex);
 
         t_now = iit::ecat::get_time_ns();
@@ -154,6 +153,7 @@ void * ecat_thread( void* cycle_ns )
 
 static void start_ecat_thread(const uint32_t cycle_time_ns) {
 
+    int                 ret;
     pthread_attr_t      attr;
     int                 policy;
     cpu_set_t           cpu_set;
@@ -179,8 +179,16 @@ static void start_ecat_thread(const uint32_t cycle_time_ns) {
 
     DPRINTF("[ECat_master] Start ecat_thread %llu ns\n", cycle_time_ns);
     ecat_thread_run = 1;
-    pthread_create(&ecat_thread_id, &attr, ecat_thread, (void*)cycle_time_ns);
+    ret = pthread_create(&ecat_thread_id, &attr, ecat_thread, (void*)cycle_time_ns);
 
+    pthread_attr_destroy ( &attr );
+    
+    if ( ret ) {
+        DPRINTF ( "%s %d %s", __FILE__, __LINE__, "ecat" );
+        perror ( "pthread_create fail" );
+
+        exit ( 1 );
+    }
 }
 
 int iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
@@ -320,13 +328,11 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
         return 0;
     }
 
-    if ( userSlaves != 0 ) {
-        for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-            // reset error counter
-            it->second->resetError();
-            // initialize tx_pdo
-            it->second->writePDO();
-        }
+    for ( const auto & item : userSlaves ) {
+        // reset error counter
+        item.second->resetError();
+        // initialize tx_pdo
+        item.second->writePDO();
     }
     
     // We are now in OP ...
@@ -408,7 +414,7 @@ int iit::ecat::setExpectedSlaves(const SlavesMap& expectedSlaves)
                 expectedSlaves.size(), ec_slavecount);
         ret = 1;
     }
-    userSlaves = & expectedSlaves;
+    userSlaves = expectedSlaves;
 
     return ret;
 }
@@ -429,29 +435,29 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     ret = pthread_cond_timedwait(&ecat_cond, &ecat_mux_sync, &ts);
     pthread_mutex_unlock(&ecat_mux_sync);
 
+    // ret != 0 on error ... ETIMEDOUT == 110
+    if ( ret != 0 ) {
+       return -ret; 
+    }
+
     *timing = ec_timing;
 
-    // ret < 0 on error
-    if ( ret < 0) {
-       return ret; 
-    }
-    
     // wkc > 0 ... check if wkc == expectedWKC
     ret = ec_timing.ecat_rx_wkc;
     
-    if ( userSlaves == NULL ) {
+    if ( userSlaves.size() == 0 ) {
         //DPRINTF("[ECat_master] WARN : the expected-slaves map was not initialized.\n");
         return ret;
     }
     
     if ( ec_timing.ecat_rx_wkc != expectedWKC ) {
         DPRINTF("[ECat_master] WARN: wkc %d != %d expectedWKC\n", ec_timing.ecat_rx_wkc , expectedWKC);
-        for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-            it->second->readErrReg();
+        for ( const auto & item : userSlaves ) {
+            item.second->readErrReg();
         }
     } else { 
-        for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-            it->second->readPDO();
+        for ( const auto & item : userSlaves ) {
+            item.second->readPDO();
         }
     }
         
@@ -465,8 +471,8 @@ int iit::ecat::send_to_slaves(void) {
 
     pthread_mutex_lock(&ecat_mutex);
     
-    for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-        it->second->writePDO();
+    for ( const auto & item : userSlaves ) {
+        item.second->writePDO();
     }
 
     // >0 if processdata is transmitted

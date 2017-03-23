@@ -82,6 +82,12 @@ if ( Xenomai_FOUND )
 endif()
 target_link_libraries(ec_iface_foe_test ${IIT_LIB_NAME})
 
+add_executable(ec_iface_test ecat_iface/ec_iface_test.cpp)
+if ( Xenomai_FOUND )
+    set_xeno_flags(ec_iface_test)
+endif()
+target_link_libraries(ec_iface_test ${IIT_LIB_NAME})
+
 
 # Install
 install(DIRECTORY include/  DESTINATION ${HEADER_INSTALL_ROOT})

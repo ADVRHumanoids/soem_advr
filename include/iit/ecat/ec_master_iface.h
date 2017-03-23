@@ -79,6 +79,8 @@ int req_state_check(uint16 slave, uint16_t req_state);
 
 int setExpectedSlaves(const SlavesMap& expectedSlaves);
 
+int ecat_cycle(void);
+
 int recv_from_slaves(ec_timing_t *);
 
 int send_to_slaves(void);
