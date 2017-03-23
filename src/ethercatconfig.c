@@ -179,6 +179,13 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
    /// 
    ///  
 #if 1
+   power_on_gpio = 1;
+   wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
+   osal_usleep(500000); 
+   power_on_gpio = 3;
+   wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
+   osal_usleep(500000); 
+   power_on_gpio = 1; 
    wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
    printf("wkc = %d\n",wkc);
 #if 0
@@ -193,7 +200,7 @@ int ecx_config_init(ecx_contextt *context, uint8 usetable)
        //return 0;
    }
 #endif
-   osal_usleep(5000000);
+   osal_usleep(3000000);
    EC_PRINT("[ECat_master] POWER ON slaves.\n");
 #endif
    ///
