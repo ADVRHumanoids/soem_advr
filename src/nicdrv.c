@@ -66,8 +66,11 @@
  */
 
 #ifdef __COBALT__
+    #include <asm/ioctl.h>
     #include <rtdm/rtdm.h>
     //#include <rtnet.h>
+    #define RTIOC_TYPE_NETWORK      RTDM_CLASS_NETWORK
+    #define RTNET_RTIOC_TIMEOUT     _IOW(RTIOC_TYPE_NETWORK,  0x11, int64_t)
 #endif
 
 #include <sys/types.h>
@@ -178,9 +181,9 @@ int ecx_setupnic(ecx_portt *port, const char *ifname, int secondary)
    *psock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ECAT));
    printf("psock %d\n", *psock);
 #ifdef __COBALT__
-//    timeout_ns = 10000LL;
-//    if ( ioctl(*psock, RTNET_RTIOC_TIMEOUT, &timeout_ns) < 0 )
-//         printf("ioctl RTNET_RTIOC_TIMEOUT failed\n");
+    timeout_ns = 10000LL;
+    if ( ioctl(*psock, RTNET_RTIOC_TIMEOUT, &timeout_ns) < 0 )
+         printf("ioctl RTNET_RTIOC_TIMEOUT failed\n");
 #else
    timeout.tv_sec =  0;
    timeout.tv_usec = 1;
@@ -195,7 +198,7 @@ int ecx_setupnic(ecx_portt *port, const char *ifname, int secondary)
    i = 1;
    r = setsockopt(*psock, SOL_SOCKET, SO_DONTROUTE, &i, sizeof(i));
    if (r) {
-       printf("SO_RCVTIMEO failed\n");
+       printf("SO_DONTROUTE failed\n");
    }
 #endif
    /* connect socket to NIC by name */
@@ -479,7 +482,12 @@ static int ecx_recvpkt(ecx_portt *port, int stacknumber)
       stack = &(port->redport->stack);
    }
    lp = sizeof(port->tempinbuf);
-   bytesrx = recv(*stack->sock, (*stack->tempbuf), lp, 0);
+#ifdef 0 //__COBALT__
+   // investigate .... rtt does not work ... should be NON blocking ?!?!
+   bytesrx = recv(*stack->sock, (*stack->tempbuf), lp, MSG_DONTWAIT);
+#else
+  bytesrx = recv(*stack->sock, (*stack->tempbuf), lp, 0);
+#endif
    port->tempinbufs = bytesrx;
    
    return (bytesrx > 0);
