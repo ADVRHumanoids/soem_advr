@@ -471,10 +471,8 @@ int iit::ecat::send_to_slaves(void) {
 
     pthread_mutex_lock(&ecat_mutex);
     
-    if ( userSlaves ) {
-        for ( auto it = userSlaves->begin(); it != userSlaves->end(); it++ ) {
-            it->second->writePDO();
-        }
+    for ( const auto & item : userSlaves ) {
+        item.second->writePDO();
     }
 
     // >0 if processdata is transmitted
