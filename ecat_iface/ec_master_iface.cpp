@@ -319,6 +319,26 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
 
     req_state_check(0, EC_STATE_SAFE_OP);
 
+    //
+    // some slaves needs receive pdos before ging to OP
+    //
+    sleep_time = { 0, 50000}; // 50 us
+    if ( ecat_cycle_ns > 0 ) {
+        // Update ec_DCtime so we can calculate stop time below.
+        ecat_cycle();
+        // Send a barrage of packets to set up the DC clock.
+        int64_t stoptime = ec_DCtime + ecat_cycle_shift_ns;
+        //int64_t stoptime = 3e9L;
+        // SOEM automatically updates ec_DCtime.
+        DPRINTF("[ECat_master] warm up .. run ecat_cycle for %.2f secs\n", (float)(stoptime/1e9L) );
+        while ( ec_DCtime < stoptime ) {
+            ecat_cycle();
+            clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
+            //DPRINTF("[ECat_master] ec_DCtime %ld %ld\n", ec_DCtime, stoptime);
+
+        }
+    }
+
     sleep_time = { 0, 50000000}; // 50 ms
     clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
 
@@ -336,23 +356,6 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
     }
     
     // We are now in OP ...
-    sleep_time = { 0, 50000}; // 50 us
-    if ( ecat_cycle_ns > 0 ) {
-        // Update ec_DCtime so we can calculate stop time below.
-        ecat_cycle();
-        // Send a barrage of packets to set up the DC clock.
-        int64_t stoptime = ec_DCtime + ecat_cycle_shift_ns;
-        //int64_t stoptime = 3e9L;
-        // SOEM automatically updates ec_DCtime.
-        DPRINTF("[ECat_master] warm up .. run ecat_cycle for %.2f secs\n", (float)(stoptime/1e9L) );
-        while ( ec_DCtime < stoptime ) {
-            ecat_cycle();
-            clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
-            //DPRINTF("[ECat_master] ec_DCtime %ld %ld\n", ec_DCtime, stoptime);
-
-        }
-
-    }
     // We now have data.
 
     expectedWKC = (ec_group[0].outputsWKC * 2) + ec_group[0].inputsWKC;
