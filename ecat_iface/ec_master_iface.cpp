@@ -95,7 +95,7 @@ void * ecat_thread( void* cycle_ns )
     pthread_setname_np(pthread_self(), "ecat");
 #endif
 
-    rc = clock_gettime(CLOCK_MONOTONIC, &ts);
+    rc = clock_gettime(CLOCK_REALTIME, &ts);
     ht = (ts.tv_nsec / 1000000) + 1; /* round to nearest ms */
     ts.tv_nsec = ht * 1000000;
     cycle_time_ns = (uint64_t)(cycle_ns); /* cycletime in ns */
@@ -110,7 +110,7 @@ void * ecat_thread( void* cycle_ns )
         /* calculate next cycle start */
         iit::ecat::add_timespec(&ts, cycle_time_ns + toff);
         /* wait to cycle start */
-        rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, NULL);
+        rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &ts, NULL);
 
         pthread_mutex_lock(&ecat_mutex);
         wkc = iit::ecat::ecat_cycle();
@@ -333,14 +333,14 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
         DPRINTF("[ECat_master] warm up .. run ecat_cycle for %.2f secs\n", (float)(stoptime/1e9L) );
         while ( ec_DCtime < stoptime ) {
             ecat_cycle();
-            clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
+            clock_nanosleep(CLOCK_REALTIME, 0, &sleep_time, NULL);
             //DPRINTF("[ECat_master] ec_DCtime %ld %ld\n", ec_DCtime, stoptime);
 
         }
     }
 
     sleep_time = { 0, 50000000}; // 50 ms
-    clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep_time, NULL);
+    clock_nanosleep(CLOCK_REALTIME, 0, &sleep_time, NULL);
 
     if ( req_state_check(0, EC_STATE_OPERATIONAL) != EC_STATE_OPERATIONAL ) {
         // exit .. otherwise with stuck in next loop

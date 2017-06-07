@@ -204,7 +204,7 @@ void ecatthread( void *ptr )
    int64 cycletime;
    
    rc = pthread_mutex_lock(&mutex);
-   rc = clock_gettime(CLOCK_MONOTONIC, &ts);
+   rc = clock_gettime(CLOCK_REALTIME, &ts);
    ht = (ts.tv_nsec / 1000000) + 1; /* round to nearest ms */
    ts.tv_nsec = ht * 1000000;
    cycletime = *(int*)ptr * 1000; /* cycletime in ns */
@@ -216,7 +216,7 @@ void ecatthread( void *ptr )
       /* calculate next cycle start */
       add_timespec(&ts, cycletime + toff);
       /* wait to cycle start */
-      rc = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, &tleft);
+      rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &ts, &tleft);
       if (dorun>0)
       {
          wkc = ec_receive_processdata(EC_TIMEOUTRET);

@@ -76,7 +76,7 @@ inline void dump_buffer(std::string filename, T t) {
 
 #define NSEC_PER_SEC	1000000000ULL
 
-inline uint64_t get_time_ns(clockid_t clock_id=CLOCK_MONOTONIC)
+inline uint64_t get_time_ns(clockid_t clock_id=CLOCK_REALTIME)
 {
     uint64_t time_ns;
     struct timespec ts;
