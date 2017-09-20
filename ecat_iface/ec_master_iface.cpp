@@ -48,7 +48,7 @@ static iit::ecat::SlavesMap userSlaves;
 static void ec_sync(const int64_t reftime, const uint64_t cycletime , int64_t* offsettime)
 {
     /* master sync offset with ec_DCtime */
-    static const uint32_t sync_point_ns = 300000; //500000; //400000;  
+    static const uint32_t sync_point_ns = 400000; //500000; //300000;  
     static int64_t integral = 0;
     int64_t delta;
 

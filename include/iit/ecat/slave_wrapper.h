@@ -244,6 +244,7 @@ public:
 
     void _check_pdo_size(void);
     
+    virtual void init_SDOs ( void ) = 0;
     void init_sdo_lookup(bool doReadSDO = false);
 
     const objd_t * getSDObjd(const char * name);

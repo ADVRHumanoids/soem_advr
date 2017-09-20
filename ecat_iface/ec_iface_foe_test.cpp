@@ -126,11 +126,11 @@ int main(int argc, char **argv)
     }
     
 
-    //DPRINTF("recv %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
-    //recv_file(slave_pos, bin_file, password, file_size, save_as);
+    DPRINTF("recv %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
+    recv_file(slave_pos, bin_file, password, file_size, save_as);
 
-    DPRINTF("send %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
-    send_file(slave_pos, bin_file, password);
+    //DPRINTF("send %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
+    //send_file(slave_pos, bin_file, password);
 
     req_state_check(slave_pos, EC_STATE_INIT);
 
