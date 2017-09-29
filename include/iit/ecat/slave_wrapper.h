@@ -189,7 +189,7 @@ public:
 
     virtual const objd_t * get_SDOs(void) = 0;
 
-    virtual uint16_t get_ESC_type(void) = 0;
+    virtual uint32_t get_ESC_type(void) = 0;
     virtual int16_t get_robot_id() { return -1; }
 
     //const uint8_t* getRawData(void) const;

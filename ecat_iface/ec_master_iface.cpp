@@ -509,7 +509,7 @@ int iit::ecat::send_file(uint16_t slave, std::string filename, uint32_t passwd_f
     return result;
 }
 
-int iit::ecat::recv_file(uint16_t slave, std::string filename, uint32_t passwd_firm, uint32_t byte_count, std::string save_as) {
+int iit::ecat::recv_file(uint16_t slave, std::string filename, uint32_t passwd_file, uint32_t byte_count, std::string save_as) {
 
     int result;
     char * base;
@@ -518,7 +518,7 @@ int iit::ecat::recv_file(uint16_t slave, std::string filename, uint32_t passwd_f
     std::string file_buff(file_size, 0);
 
     base = basename((char*)filename.c_str());
-    result = ec_FOEread(slave, base, passwd_firm, &file_size ,(void*)file_buff.c_str(), EC_TIMEOUTSTATE*10);
+    result = ec_FOEread(slave, base, passwd_file, &file_size ,(void*)file_buff.c_str(), EC_TIMEOUTSTATE*10);
     if ( result <= 0 ) {
         char * err =  ec_elist2string();
         DPRINTF("Ec_error : %s\n", err);
