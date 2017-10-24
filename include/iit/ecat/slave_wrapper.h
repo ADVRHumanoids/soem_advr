@@ -107,7 +107,6 @@ private:
     int error_num;
 };
 
-
 template <typename T>
 inline int check_datatype(int datatype, T t) {
 
@@ -252,8 +251,10 @@ public:
 
     template<typename T>
     int writeSDO_byname(const char * name, T t);
+    int writeSDO_byname(const char * name);
     template<typename T>
     int writeSDO_byname(const std::string name, T t);
+    int writeSDO_byname(const std::string name);
 
     template<typename T>
     int readSDO_byname(const char * name, T &t);
@@ -400,6 +401,27 @@ template<typename T>
 inline int CLASS::writeSDO_byname(const std::string name, const T t) {
     return writeSDO_byname(name.c_str(), t);
 }
+
+SIGNATURE(int)::writeSDO_byname(const char * name) {
+
+    // look up name in SDOs
+    const objd_t * sdo = getSDObjd(name);
+
+    if ( sdo->access == ATYPE_RO ) {
+        DPRINTF("ERROR sdo obj is READ_ONLY %s\n", sdo->name);
+        throw EscWrpError(EC_WRP_SDO_RO, sdo->name);
+    }
+
+    if ( writeSDO(sdo) != EC_WRP_OK ) {
+        throw EscWrpError(EC_WRP_SDO_WRITE_FAIL, sdo->name);
+    }
+
+    return EC_WRP_OK;
+}
+SIGNATURE(int)::writeSDO_byname(const std::string name) {
+    return writeSDO_byname(name.c_str());
+}
+
 
 // TEMPL
 // template<typename T>

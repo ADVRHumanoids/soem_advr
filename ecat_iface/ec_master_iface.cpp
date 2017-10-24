@@ -317,10 +317,13 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
         }
     }
 
-    req_state_check(0, EC_STATE_SAFE_OP);
+    if ( req_state_check(0, EC_STATE_SAFE_OP) != EC_STATE_SAFE_OP ) {
+        return 0;
+    }
+    
 
     //
-    // some slaves needs receive pdos before ging to OP
+    // some slaves needs receive pdos before going to OP
     //
     sleep_time = { 0, 50000}; // 50 us
     if ( ecat_cycle_ns > 0 ) {
