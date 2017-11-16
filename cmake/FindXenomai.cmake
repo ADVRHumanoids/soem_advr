@@ -11,9 +11,9 @@ PATHS ${Xenomai_SEARCH_PATH} )
 if( Xenomai_DIR ) 
     MESSAGE(STATUS "xenomai found: \"${Xenomai_DIR}\"")
 
-    execute_process(COMMAND xeno-config --posix --cflags OUTPUT_VARIABLE XENO_CFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${Xenomai_DIR}/bin/xeno-config --posix --cflags OUTPUT_VARIABLE XENO_CFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
     #execute_process(COMMAND xeno-config --posix --ldflags OUTPUT_VARIABLE XENO_LDFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
-    execute_process(COMMAND xeno-config --posix --no-auto-init --ldflags OUTPUT_VARIABLE XENO_LDFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${Xenomai_DIR}/bin/xeno-config --posix --no-auto-init --ldflags OUTPUT_VARIABLE XENO_LDFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
     
     macro(set_xeno_flags target)
     set_target_properties(${target} PROPERTIES COMPILE_FLAGS ${XENO_CFLAGS})
