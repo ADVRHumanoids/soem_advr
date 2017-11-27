@@ -216,6 +216,8 @@ protected:
     uint32_t  nbytes_in, nbytes_out;
 
     const ec_slavet * ec_slave_desc;
+    
+    bool use_pipes = true;
 };
 
 
