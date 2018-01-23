@@ -471,16 +471,18 @@ int iit::ecat::recv_from_slaves(ec_timing_t* timing) {
     return ret;
 }
 
-int iit::ecat::send_to_slaves(void) {
+int iit::ecat::send_to_slaves(bool write_slaves_pdo) {
 
     int ret = 0;
 
     pthread_mutex_lock(&ecat_mutex);
     
-    for ( const auto & item : userSlaves ) {
-        item.second->writePDO();
+    if ( write_slaves_pdo ) {
+        for ( const auto & item : userSlaves ) {
+            item.second->writePDO();
+        }
     }
-
+    
     // >0 if processdata is transmitted
     ret = ec_send_processdata();
     //ret = 1;

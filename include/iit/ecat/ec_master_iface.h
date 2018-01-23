@@ -83,7 +83,7 @@ int ecat_cycle(void);
 
 int recv_from_slaves(ec_timing_t *);
 
-int send_to_slaves(void);
+int send_to_slaves(bool write_slaves_pdo=true);
 
 int send_file(uint16_t slave, std::string filename, uint32_t passwd_firm);
 int recv_file(uint16_t slave, std::string filename, uint32_t passwd_firm, uint32_t byte_count, std::string save_as);
