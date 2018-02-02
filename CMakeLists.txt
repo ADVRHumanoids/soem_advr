@@ -4,6 +4,7 @@ project(soem)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(MacroOptionalBuild)
 include(MacroSetcap)
+include(MacroInstallLibrary)
 
 set(CMAKE_CXX_FLAGS     "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
 set(ENABLE_XENO         CACHE BOOL "OFF")
@@ -18,11 +19,7 @@ else ()
     set(LIB_TYPE _nrt)
 endif()
 
-
-
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
-set(HEADER_INSTALL_ROOT /usr/local/include/ CACHE PATH "Where to install the headers")
-set(LIB_INSTALL_ROOT /usr/local/lib/ CACHE PATH "Where to install the libraries")
 
 ###########
 ## Build ##
@@ -89,7 +86,6 @@ endif()
 target_link_libraries(ec_iface_test ${IIT_LIB_NAME})
 
 
-# Install
-install(DIRECTORY include/  DESTINATION ${HEADER_INSTALL_ROOT})
-install(TARGETS ${SOEM_LIB_NAME} DESTINATION ${LIB_INSTALL_ROOT})
-install(TARGETS ${IIT_LIB_NAME}  DESTINATION ${LIB_INSTALL_ROOT})
+# NOTE specify CMAKE_INSTALL_PREFIX cmake variable
+library_install(${SOEM_LIB_NAME} 1 0 0)
+library_install(${IIT_LIB_NAME} 1 0 0)
