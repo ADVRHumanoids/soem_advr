@@ -45,10 +45,10 @@ inline void print_stat(stat_t &s) {
 
     if (b_acc::count(s) > 0) {
         oss << "\tCount " << b_acc::count(s) << std::endl;
-        oss << "\tMean " << (uint64_t)b_acc::mean(s);
-        oss << "\tMin " << b_acc::min(s);
-        oss << "\tMax " << b_acc::max(s);
-        oss << "\tVar " << b_acc::variance(s);
+        oss << "\tMean "  << b_acc::mean(s);
+        oss << "\tMin "   << b_acc::min(s);
+        oss << "\tMax "   << b_acc::max(s);
+        oss << "\tVar "   << b_acc::variance(s);
         oss << "\tErrOfMean " << b_acc::error_of<b_acc::tag::mean>(s);
         oss << std::endl;
     } else {

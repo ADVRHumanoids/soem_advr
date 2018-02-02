@@ -350,7 +350,7 @@ SIGNATURE(void)::init_sdo_lookup(bool doReadSDO) {
                 // raise EscWrpError or IGNORE and continue ?!?!?
                 throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
             }
-            DPRINTF("[%s] sdo %s\n", __FUNCTION__, sdo->name);
+            DPRINTF("[%s] sdo %s 0x%04X %d\n", __FUNCTION__, sdo->name, sdo->index, sdo->subindex);
             
         }
         sdo ++;
