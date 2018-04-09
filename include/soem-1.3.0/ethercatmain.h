@@ -454,6 +454,8 @@ typedef struct
    ec_eepromFMMUt *eepFMMU; 
    /** registered FoE hook */
    int            (*FOEhook)(uint16 slave, int packetnumber, int datasize);
+   /** */
+   boolean        *ec_reset_micro;
 } ecx_contextt;
 
 #ifdef EC_VER1
@@ -468,6 +470,7 @@ extern ec_groupt   ec_group[EC_MAXGROUP];
 extern boolean     EcatError;
 extern int64       ec_DCtime;
 
+void ec_reset_micro_slaves(boolean reset_micro);
 void ec_pusherror(const ec_errort *Ec);
 boolean ec_poperror(ec_errort *Ec);
 boolean ec_iserror(void);

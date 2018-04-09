@@ -40,6 +40,8 @@ struct ec_timing_t {
     int64_t     offset;       ///< sleep time of the master until next "DC tick"
     uint64_t    loop_time;    ///< actual measure of the DC period
     int32_t     ecat_rx_wkc;
+    uint64_t    ecat_cycle_time;
+    int64_t     delta;
 };
 
 typedef std::shared_ptr<EscWrapper>  ESCPtr;
@@ -52,7 +54,7 @@ typedef std::map<int, ESCPtr>  SlavesMap;
  *
  * \return int ec_slavexount
  */
-int initialize(const char* ifname);
+int initialize(const char* ifname, bool reset_micro);
 /**
  *
  * \param ecat_cycle_ns desired period of the DC (in nanoseconds)
@@ -81,7 +83,7 @@ int setExpectedSlaves(const SlavesMap& expectedSlaves);
 
 int ecat_cycle(void);
 
-int recv_from_slaves(ec_timing_t *);
+int recv_from_slaves(ec_timing_t &);
 
 int send_to_slaves(bool write_slaves_pdo=true);
 

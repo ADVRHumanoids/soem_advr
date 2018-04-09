@@ -138,76 +138,78 @@ int ec_findconfig( uint32 man, uint32 id)
  */
 int ecx_config_init(ecx_contextt *context, uint8 usetable)
 {
-   uint16 w, slave, ADPh, configadr, ssigen;
-   uint16 topology, estat;
-   int16 topoc, slavec, aliasadr;
-   uint8 b,h;
-   uint8 zbuf[64];
-   uint8 SMc;
-   uint32 eedat;
-   int wkc, cindex, nSM, lp;
+    uint16 w, slave, ADPh, configadr, ssigen;
+    uint16 topology, estat;
+    int16 topoc, slavec, aliasadr;
+    uint8 b,h;
+    uint8 zbuf[64];
+    uint8 SMc;
+    uint32 eedat;
+    int wkc, cindex, nSM, lp;
 
-   uint16_t power_on_gpio = 1;
-   uint16_t power_in_gpio = 0;
-   uint8_t try_cnt = 3;
+    uint16_t power_on_gpio = 1;
+    uint16_t power_in_gpio = 0;
+    uint8_t try_cnt = 3;
 
 
-   EC_PRINT("ec_config_init %d\n",usetable);
-   *(context->slavecount) = 0;
-   /* clean ec_slave array */
-   memset(context->slavelist, 0x00, sizeof(ec_slavet) * context->maxslave);
-   memset(&zbuf, 0x00, sizeof(zbuf));
-   memset(context->grouplist, 0x00, sizeof(ec_groupt) * context->maxgroup);
-   /* clear slave eeprom cache */
-   ecx_siigetbyte(context, 0, EC_MAXEEPBUF);
+    EC_PRINT("ec_config_init %d\n",usetable);
+    *(context->slavecount) = 0;
+    /* clean ec_slave array */
+    memset(context->slavelist, 0x00, sizeof(ec_slavet) * context->maxslave);
+    memset(&zbuf, 0x00, sizeof(zbuf));
+    memset(context->grouplist, 0x00, sizeof(ec_groupt) * context->maxgroup);
+    /* clear slave eeprom cache */
+    ecx_siigetbyte(context, 0, EC_MAXEEPBUF);
+
+    for(lp = 0; lp < context->maxgroup; lp++)
+    {
+        context->grouplist[lp].logstartaddr = lp << 16; /* default start address per group entry */
+    }
+    /* make special pre-init register writes to enable MAC[1] local administered bit *
+        * setting for old netX100 slaves */
+    b = 0x00;
+    ecx_BWR(context->port, 0x0000, ECT_REG_DLALIAS, sizeof(b), &b, EC_TIMEOUTRET3);    /* Ignore Alias register */
+    b = EC_STATE_INIT | EC_STATE_ACK;
+    wkc = ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
+    //printf("wkc = %d\n",wkc);
+    /* netX100 should now be happy */
    
-   for(lp = 0; lp < context->maxgroup; lp++)
-   {
-      context->grouplist[lp].logstartaddr = lp << 16; /* default start address per group entry */
-   }
-   /* make special pre-init register writes to enable MAC[1] local administered bit *
-    * setting for old netX100 slaves */
-   b = 0x00;
-   ecx_BWR(context->port, 0x0000, ECT_REG_DLALIAS, sizeof(b), &b, EC_TIMEOUTRET3);    /* Ignore Alias register */
-   b = EC_STATE_INIT | EC_STATE_ACK;
-   wkc = ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
-   printf("wkc = %d\n",wkc);
-   /* netX100 should now be happy */
-   
-   ///
-   /// Walkman HiPower Motor Controller dsp is powered on by et1100
-   /// 
-   ///  
-#if 1
-   power_on_gpio = 1;
-   wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
-   osal_usleep(250000);
-   power_on_gpio = 3;
-   wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
-   osal_usleep(250000);
-   power_on_gpio = 1;
-   wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
-   printf("wkc = %d\n",wkc);
-#if 0
-   while ( try_cnt-- ) {
-       ec_BRD(0x0000, 0x0f18, sizeof(power_in_gpio), &power_in_gpio, EC_TIMEOUTSAFE);
-       if ( power_in_gpio ) {
-           break;
-       }
-   }
-   if ( power_in_gpio == 0 ) {
-       EC_PRINT("[ECat_master] Failed to POWER ON C2000 slaves!\n");
-       //return 0;
-   }
-#endif
-   osal_usleep(3000000);
-   EC_PRINT("[ECat_master] POWER ON slaves.\n");
-#endif
-   ///
-   ///
+    ///
+    /// Walkman HiPower Motor Controller dsp is powered on by et1100
+    /// 
+    ///  
+    if ( *(context->ec_reset_micro) ) {
+       
+       power_on_gpio = 1;
+       wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
+       osal_usleep(250000);
+       power_on_gpio = 3;
+       wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
+       osal_usleep(250000);
+       power_on_gpio = 1;
+       wkc = ec_BWR(0x0000, 0x0f10, sizeof(power_on_gpio), &power_on_gpio, EC_TIMEOUTSAFE);
+       osal_usleep(250000);
+       //printf("wkc = %d\n",wkc);
+       while ( try_cnt-- ) {
+            ec_BRD(0x0000, 0x0f18, sizeof(power_in_gpio), &power_in_gpio, EC_TIMEOUTSAFE);
+            if ( power_in_gpio ) {
+                break;
+            }
+        }
+        if ( power_in_gpio == 0 ) {
+            printf("[ECat_master] Failed to reset slaves!\n");
+            return 0;
+        }
+//         osal_usleep(3000000); 
+        printf("[ECat_master] POWER ON slaves.\n");
+    } else {
+        printf("[ECat_master] reset_micro set to FALSE \n");
+    }
+    ///
+    ///
 
    wkc = ecx_BWR(context->port, 0x0000, ECT_REG_ALCTL, sizeof(b), &b, EC_TIMEOUTRET3);      /* Reset all slaves to Init */
-   printf("wkc = %d\n",wkc);
+   //printf("wkc = %d\n",wkc);
    
    w = 0x0000;
    wkc = ecx_BRD(context->port, 0x0000, ECT_REG_TYPE, sizeof(w), &w, EC_TIMEOUTSAFE);   /* detect number of slaves */

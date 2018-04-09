@@ -91,7 +91,7 @@ int main(int argc, char * const argv[])
         return 0;
     }
 
-    if ( initialize(argv[1]) <= 0) {
+    if ( initialize(argv[1], true) <= 0) {
         finalize();
         return 0;
     }
@@ -100,7 +100,7 @@ int main(int argc, char * const argv[])
     
     while ( run_loop ) {
          
-        wkc = recv_from_slaves ( &timing );
+        wkc = recv_from_slaves ( timing );
         if ( wkc =! expected_wkc ) {
             printf("OOps wkc =! expected_wkc %d =! %d\n", wkc , expected_wkc);
         } 

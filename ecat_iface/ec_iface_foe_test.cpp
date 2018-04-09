@@ -91,21 +91,22 @@ int main(int argc, char **argv)
     uint32_t    sync_cycle_offset_ns = 0;       //  0ms
 
 
-    if ( ! ( argc == 7 ) ) {
-    printf("Usage: %s ifname slave_pos filename password size_bytes save_as\nifname = {eth0,rteth0}\n", argv[0]);
+    if ( ! ( argc == 8 ) ) {
+    printf("Usage: %s ifname slave_pos op filename password size_bytes save_as\nop = {rd,wr}\nifname = {eth0,rteth0}\n", argv[0]);
         return 0;
     }
 
-    if ( initialize(argv[1]) <= 0) {
+    if ( initialize(argv[1], true) <= 0) {
         finalize();
         return 0;
     }
 
     int slave_pos = atoi(argv[2]);
-    std::string bin_file((const char*)argv[3]);
-    int password  = strtol(argv[4], 0, 16);
-    int file_size  = atoi(argv[5]);
-    std::string save_as((const char*)argv[6]);
+    std::string op((const char*)argv[3]);
+    std::string bin_file((const char*)argv[4]);
+    int password  = strtol(argv[5], 0, 16);
+    int file_size  = atoi(argv[6]);
+    std::string save_as((const char*)argv[7]);
     
     //power off 
     esc_gpio_ll_wr ( 0x1000+slave_pos, 0x0 );
@@ -126,12 +127,16 @@ int main(int argc, char **argv)
     }
     
 
-    DPRINTF("recv %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
-    recv_file(slave_pos, bin_file, password, file_size, save_as);
-
-    //DPRINTF("send %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
-    //send_file(slave_pos, bin_file, password);
-
+    if ( ! op.compare("rd") ) { 
+        DPRINTF("recv %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password, file_size, save_as.c_str());
+        recv_file(slave_pos, bin_file, password, file_size, save_as);
+    } else if ( ! op.compare("wr") ) {
+        DPRINTF("send %d %s pwd 0x%04X size 0x%04X %s\n", slave_pos, bin_file.c_str(), password );
+        send_file(slave_pos, bin_file, password);
+    } else {
+        DPRINTF("%s NOT supported\n", op.c_str());      
+    }
+    
     req_state_check(slave_pos, EC_STATE_INIT);
 
     finalize();

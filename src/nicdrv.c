@@ -179,7 +179,7 @@ int ecx_setupnic(ecx_portt *port, const char *ifname, int secondary)
    }   
    /* we use RAW packet socket, with packet type ETH_P_ECAT */
    *psock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ECAT));
-   printf("psock %d\n", *psock);
+   //printf("psock %d\n", *psock);
 #ifdef __COBALT__
     timeout_ns = 10000LL;
     if ( ioctl(*psock, RTNET_RTIOC_TIMEOUT, &timeout_ns) < 0 )

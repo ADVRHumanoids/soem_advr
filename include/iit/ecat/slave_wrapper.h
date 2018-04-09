@@ -52,6 +52,7 @@ enum ec_wrp_err: int {
     EC_WRP_SDO_RO,
     EC_WRP_SDO_MISMATCH,
     EC_WRP_SDO_NOTEXIST,
+    EC_WRP_SDO_DUPLICATE_KEY,
     EC_WRP_SDO_WRITE_FAIL,
     EC_WRP_SDO_READ_FAIL,
     EC_WRP_SDO_WRITE_CB_FAIL,
@@ -69,6 +70,7 @@ static const char * ec_wrp_err_msg[] = {
     STRFY(EC_WRP_SDO_RO),
     STRFY(EC_WRP_SDO_MISMATCH),
     STRFY(EC_WRP_SDO_NOTEXIST),
+    STRFY(EC_WRP_SDO_DUPLICATE_KEY),
     STRFY(EC_WRP_SDO_WRITE_FAIL),
     STRFY(EC_WRP_SDO_READ_FAIL),
     STRFY(EC_WRP_SDO_WRITE_CB_FAIL),
@@ -87,6 +89,7 @@ typedef struct {
     void * data;
 } objd_t;
 
+typedef std::map<std::string, const objd_t*> sdo_ptr_map;
 
 class EscWrpError : public std::runtime_error {
 public:
@@ -230,7 +233,7 @@ public:
     typedef typename EscPDOTypes::pdo_rx    pdo_rx_t;
     typedef typename EscPDOTypes::pdo_tx    pdo_tx_t;
     typedef EscSDOTypes                     sdo_t;
-
+    
 public:
     BasicEscWrapper(const ec_slavet& slave_descriptor) :
     EscWrapper(slave_descriptor) {
@@ -265,9 +268,11 @@ public:
     int readSDO_byname(const std::string name, T &t);
     int readSDO_byname(const std::string name);
 
-    //template<typename T>
-    //int getSDO_byname(const char * name, T &t);
-
+    template<typename T>
+    int getSDO_byname(const char * name, T &t);
+    template<typename T>
+    int getSDO_byname(const std::string name, T &t);
+    
     virtual const pdo_rx_t& getRxPDO() const;
     virtual const pdo_tx_t& getTxPDO() const;
     virtual void setTxPDO(const pdo_tx_t&);
@@ -282,12 +287,12 @@ protected:
 
 protected:
 
-    sdo_t    sdo;
+    sdo_t           sdo;
 
     pdo_rx_t        rx_pdo;
     pdo_tx_t        tx_pdo;
 
-    std::map<std::string, const objd_t*> sdo_look_up;
+    sdo_ptr_map     sdo_look_up;
 
 private:
 
@@ -344,19 +349,41 @@ SIGNATURE(void)::setTxPDO(const pdo_tx_t& tx) {
 
 SIGNATURE(void)::init_sdo_lookup(bool doReadSDO) {
 
+    bool has_duplicate_key = false;
     const objd_t * sdo = get_SDOs();
+    sdo_ptr_map duplicate_sdo;
+    
     while ( sdo && sdo->index ) {
+        // check duplicate key
+        auto iter = sdo_look_up.find(sdo->name);
+        if ( iter != sdo_look_up.end()) {
+            DPRINTF("[%s] duplicate sdo name <%s> found 0x%04X:%d and 0x%04X:%d\n", __FUNCTION__, sdo->name,
+                    sdo->index, sdo->subindex, iter->second->index, iter->second->subindex);
+            has_duplicate_key = true;
+            duplicate_sdo[sdo->name] = sdo;
+            sdo ++;
+            continue;
+        }
+        
         sdo_look_up[sdo->name] = sdo;
         if ( doReadSDO ) {
             if ( readSDO(sdo) != EC_WRP_OK) {
                 // raise EscWrpError or IGNORE and continue ?!?!?
                 throw EscWrpError(EC_WRP_SDO_READ_FAIL, sdo->name);
             }
-            DPRINTF("[%s] sdo %s 0x%04X %d\n", __FUNCTION__, sdo->name, sdo->index, sdo->subindex);
-            
+            DPRINTF("[%s] sdo %s 0x%04X %d\n", __FUNCTION__, sdo->name, sdo->index, sdo->subindex);            
         }
         sdo ++;
     }
+    
+    if ( has_duplicate_key ) {
+        std::string dup_names;
+        for ( auto const &s : duplicate_sdo ) {
+            dup_names += std::string(s.first)+" "; 
+        }
+        throw EscWrpError(EC_WRP_SDO_DUPLICATE_KEY, dup_names);
+    }
+
 }
 
 SIGNATURE(const objd_t *)::getSDObjd(const char * name) {
@@ -425,23 +452,29 @@ SIGNATURE(int)::writeSDO_byname(const std::string name) {
 }
 
 
-// TEMPL
-// template<typename T>
-// inline int CLASS::getSDO_byname(const char * name, T &t) {
-// 
-//     // look up name in SDOs
-//     const objd_t * sdo = getSDObjd(name);
-// 
-//     // check if sdobj datatype match template variable
-//     if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
-//         DPRINTF("ERROR get_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
-//         throw EscWrpError(EC_WRP_SDO_MISMATCH, sdo->name);
-//     }
-// 
-//     t = *((T*)sdo->data);
-// 
-//     return EC_WRP_OK;  
-// }
+TEMPL
+template<typename T>
+inline int CLASS::getSDO_byname(const char * name, T &t) {
+
+    // look up name in SDOs
+    const objd_t * sdo = getSDObjd(name);
+
+    // check if sdobj datatype match template variable
+    if ( check_datatype(sdo->datatype, t) != EC_WRP_OK ) {
+        DPRINTF("ERROR get_SDO_byname %s datatype mismatch %s\n", sdo->name, typeid(T).name() );
+        throw EscWrpError(EC_WRP_SDO_MISMATCH, sdo->name);
+    }
+
+    t = *((T*)sdo->data);
+
+    return EC_WRP_OK;  
+}
+TEMPL
+template<typename T>
+inline int CLASS::getSDO_byname(const std::string name, T &t) {
+    return getSDO_byname(name.c_str(), t);
+}
+
 
 TEMPL
 template<typename T>

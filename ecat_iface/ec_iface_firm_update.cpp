@@ -100,7 +100,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    if ( initialize(argv[1]) <= 0) {
+    if ( initialize(argv[1], true) <= 0) {
         finalize();
         return 0;
     }
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     finalize();
 
 
-    initialize(argv[1]);
+    initialize(argv[1], true);
     expected_wkc = operational(sync_cycle_time_ns, sync_cycle_offset_ns);
     finalize();
 
