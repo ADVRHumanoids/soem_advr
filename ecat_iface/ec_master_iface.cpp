@@ -29,18 +29,88 @@
 /**
  * 
  */
+
 static uint8_t IOmap[4096];
 
 static int expectedWKC, ecat_thread_run; 
 
 static pthread_t        ecat_thread_id;
 static pthread_mutex_t  ecat_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t  ecat_mux_sync = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t   ecat_cond = PTHREAD_COND_INITIALIZER;
-
+static iit::ecat::ecm_barrier_t ecm_barrier;
 static iit::ecat::ec_timing_t ec_timing;
-
 static iit::ecat::SlavesMap userSlaves;
+
+
+int ecm_barrier_init(iit::ecat::ecm_barrier_t *b)
+{
+    pthread_mutexattr_t mattr;
+    pthread_condattr_t cattr;
+    int ret;
+
+    b->signaled = 0;
+    pthread_mutexattr_init(&mattr);
+    pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_NORMAL);
+    pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_PRIVATE);
+    pthread_mutexattr_setprotocol(&mattr, PTHREAD_PRIO_NONE);
+    ret = pthread_mutex_init(&b->lock, &mattr);
+    pthread_mutexattr_destroy(&mattr);
+    if (ret)
+        return ret;
+
+    pthread_condattr_init(&cattr);
+    pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_PRIVATE);
+    ret = pthread_cond_init(&b->barrier, &cattr);
+    pthread_condattr_destroy(&cattr);
+    if (ret)
+        pthread_mutex_destroy(&b->lock);
+
+    return ret;
+}
+
+void ecm_barrier_destroy(iit::ecat::ecm_barrier_t *b)
+{
+    pthread_cond_destroy(&b->barrier);
+    pthread_mutex_destroy(&b->lock);
+}
+
+int ecm_barrier_wait(iit::ecat::ecm_barrier_t *b)
+{
+    int ret = 0;
+    
+    pthread_mutex_lock(&b->lock);
+    while (!b->signaled) {
+        ret = pthread_cond_wait(&b->barrier, &b->lock);
+        if (ret)
+            break;
+    }
+    b->signaled = 0;
+    pthread_mutex_unlock(&b->lock);
+    return ret;
+}
+
+int ecm_barrier_timedwait(iit::ecat::ecm_barrier_t *b, struct timespec *ts)
+{
+    int ret = 0;
+    
+    pthread_mutex_lock(&b->lock);
+    while (!b->signaled) {
+        ret = pthread_cond_timedwait(&b->barrier, &b->lock, ts);
+        if (ret)
+            break;
+    }
+    b->signaled = 0;
+    pthread_mutex_unlock(&b->lock);
+    return ret;
+}
+
+void ecm_barrier_release(iit::ecat::ecm_barrier_t *b)
+{
+    pthread_mutex_lock(&b->lock);
+    b->signaled = 1;
+    pthread_cond_broadcast(&b->barrier);
+    //pthread_cond_signal(&b->barrier);
+    pthread_mutex_unlock(&b->lock);
+}
 
 
 
@@ -141,11 +211,7 @@ void * ecat_thread( void* cycle_ns )
         t_prec = t_now;
         
         if ( wkc > 0 ) {
-
-            pthread_mutex_lock(&ecat_mux_sync);
-            pthread_cond_signal(&ecat_cond);
-            pthread_mutex_unlock(&ecat_mux_sync);
-
+            ecm_barrier_release(&ecm_barrier);
         } else {
             DPRINTF("wkc %d\n", wkc);
         }
@@ -272,10 +338,7 @@ int iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
 int iit::ecat::initialize(const char* ifname, bool reset_micro)
 {
 
-    pthread_mutex_init(&ecat_mutex, NULL);
-    pthread_mutex_init(&ecat_mux_sync, NULL);
-    pthread_cond_init(&ecat_cond, NULL);
-
+    ecm_barrier_init(&ecm_barrier);
     ec_reset_micro_slaves(reset_micro);
     
     DPRINTF("[ECat_master] Using %s\n", ifname);
@@ -418,7 +481,8 @@ void iit::ecat::finalize(bool do_power_off) {
     
     ec_close();
     DPRINTF("[ECat_master] close\n");
-
+    ecm_barrier_destroy(&ecm_barrier);
+    pthread_mutex_destroy(&ecat_mutex);
 }
 
 int iit::ecat::setExpectedSlaves(const SlavesMap& expectedSlaves)
@@ -442,12 +506,8 @@ int iit::ecat::recv_from_slaves(ec_timing_t &timing) {
     // By default, CLOCK_REALTIME is used.
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
-    //ts.tv_sec = ts.tv_sec + 1;
     add_timespec(&ts,250000000);
-    
-    pthread_mutex_lock(&ecat_mux_sync);
-    ret = pthread_cond_timedwait(&ecat_cond, &ecat_mux_sync, &ts);
-    pthread_mutex_unlock(&ecat_mux_sync);
+    ret = ecm_barrier_timedwait(&ecm_barrier, &ts);
 
     // ret != 0 on error ... ETIMEDOUT == 110
     if ( ret != 0 ) {

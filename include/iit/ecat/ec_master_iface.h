@@ -33,8 +33,13 @@ extern "C" {
 namespace iit {
 namespace ecat {
 
+struct __ecm_barrier {
+    pthread_mutex_t lock;
+    pthread_cond_t barrier;
+    int signaled;
+};
 
-struct ec_timing_t {
+struct __ec_timing {
 
     int64_t     recv_dc_time; ///< reception timestamp from 1-1-2000 (in [ns])
     int64_t     offset;       ///< sleep time of the master until next "DC tick"
@@ -44,6 +49,8 @@ struct ec_timing_t {
     int64_t     delta;
 };
 
+typedef struct __ecm_barrier ecm_barrier_t;
+typedef struct __ec_timing ec_timing_t;
 typedef std::shared_ptr<EscWrapper>  ESCPtr;
 typedef std::map<int, ESCPtr>  SlavesMap;
 
