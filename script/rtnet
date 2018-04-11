@@ -1,0 +1,127 @@
+#!/bin/sh
+#
+# script for loading/unloading RTnet, RTmac/TMDA, and RTcap
+#
+
+prefix="/usr/xenomai"
+RTNETCFG="${prefix}/etc/rtnet.conf"
+
+
+debug_func() {
+    echo "$*"
+    eval $*
+}
+
+usage() {
+    cat << EOF
+Usage:
+    $0 [-cf <config-file>] [-v] [-c] {start|stop}
+    Start or stop station according to configuration file
+
+    The additional switch -v enables verbose output.
+    The additional switch -c enables capturing mode to allow use of a network
+    analyzer such as Wireshark (if rtnet was built with --enable-rtcap).
+EOF
+}
+
+
+
+if [ "$1" = "-cf" ]; then
+    RTNETCFG="$2"
+    shift 2
+fi
+
+if [ -r $RTNETCFG ]; then
+    . $RTNETCFG
+else
+    echo "Could not read $RTNETCFG"
+    exit 1
+fi
+
+if [ "$1" = "-v" ]; then
+    echo "Turning on verbose mode"
+    RTIFCONFIG="debug_func $RTIFCONFIG"
+    RTCFG="debug_func $RTCFG"
+    TDMACFG="debug_func $TDMACFG"
+    shift 1
+fi
+
+if [ "$1" = "-c" ]; then
+    RTCAP="yes"
+    shift 1
+fi
+
+NETMASK_OPT=
+if [ ! "$NETMASK" = "" ]; then
+    NETMASK_OPT="netmask $NETMASK"
+fi
+
+
+case "$1" in
+    start)
+    modprobe rtnet >/dev/null || exit 1
+    modprobe rtipv4 >/dev/null || exit 1
+    modprobe $RT_DRIVER $RT_DRIVER_OPTIONS >/dev/null || exit 1
+
+    for dev in $REBIND_RT_NICS; do
+        if [ -d /sys/bus/pci/devices/$dev/driver ]; then
+            echo $dev > /sys/bus/pci/devices/$dev/driver/unbind
+        fi
+        echo $dev > /sys/bus/pci/drivers/$RT_DRIVER/bind
+    done
+
+    for PROTOCOL in $RT_PROTOCOLS; do
+        modprobe rt$PROTOCOL >/dev/null || exit 1
+    done
+
+    if [ $RT_LOOPBACK = "yes" ]; then
+        modprobe rt_loopback >/dev/null || exit 1
+    fi
+
+    if [ $RTCAP = "yes" ]; then
+        modprobe rtcap >/dev/null || exit 1
+    fi
+
+    if [ $RT_LOOPBACK = "yes" ]; then
+        $RTIFCONFIG rtlo up 127.0.0.1
+    fi
+
+    if [ $RTCAP = "yes" ]; then
+        ifconfig rteth0 up $IPADDR $NETMASK_OPT
+        #ifconfig rteth0-mac up
+        if [ $RT_LOOPBACK = "yes" ]; then
+            ifconfig rtlo up
+        fi
+    fi
+
+    $RTIFCONFIG rteth0 up $IPADDR $NETMASK_OPT
+
+    ;;
+
+    stop)
+    ifconfig rteth0 down 2>/dev/null
+    ifconfig rteth0-mac down 2>/dev/null
+    ifconfig rtlo down 2>/dev/null
+
+    $RTIFCONFIG rteth0 down 2>/dev/null
+    $RTIFCONFIG rtlo down 2>/dev/null
+
+    for MOD in "tdma rtmac rtcfg rtcap rt_loopback rtudp rtpacket $RT_DRIVER rtipv4 rtnet"; do
+        rmmod $MOD 2>/dev/null
+    done
+
+    for dev in $REBIND_RT_NICS; do
+        echo 1 > /sys/bus/pci/devices/$dev/remove
+    done
+    if [ ! "$REBIND_RT_NICS" = "" ]; then
+        sleep 1
+        echo 1 > /sys/bus/pci/rescan
+    fi
+    ;;
+
+
+
+    *)
+    usage
+    exit 1
+esac
