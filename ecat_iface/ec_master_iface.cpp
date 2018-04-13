@@ -38,87 +38,90 @@ static pthread_t        ecat_thread_id;
 static pthread_mutex_t  ecat_mutex = PTHREAD_MUTEX_INITIALIZER;
 static iit::ecat::ecm_barrier_t ecm_barrier;
 static iit::ecat::ec_timing_t ec_timing;
+static iit::ecat::ec_thread_arg_t gl_ec_thread_arg;
 static iit::ecat::SlavesMap userSlaves;
 
 
-int ecm_barrier_init(iit::ecat::ecm_barrier_t *b)
+int ecm_barrier_init(iit::ecat::ecm_barrier_t &b)
 {
     pthread_mutexattr_t mattr;
     pthread_condattr_t cattr;
     int ret;
 
-    b->signaled = 0;
+    b.signaled = 0;
     pthread_mutexattr_init(&mattr);
     pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_NORMAL);
     pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_PRIVATE);
     pthread_mutexattr_setprotocol(&mattr, PTHREAD_PRIO_NONE);
-    ret = pthread_mutex_init(&b->lock, &mattr);
+    ret = pthread_mutex_init(&b.lock, &mattr);
     pthread_mutexattr_destroy(&mattr);
     if (ret)
         return ret;
 
     pthread_condattr_init(&cattr);
     pthread_condattr_setpshared(&cattr, PTHREAD_PROCESS_PRIVATE);
-    ret = pthread_cond_init(&b->barrier, &cattr);
+    ret = pthread_cond_init(&b.barrier, &cattr);
     pthread_condattr_destroy(&cattr);
     if (ret)
-        pthread_mutex_destroy(&b->lock);
+        pthread_mutex_destroy(&b.lock);
 
     return ret;
 }
 
-void ecm_barrier_destroy(iit::ecat::ecm_barrier_t *b)
+void ecm_barrier_destroy(iit::ecat::ecm_barrier_t &b)
 {
-    pthread_cond_destroy(&b->barrier);
-    pthread_mutex_destroy(&b->lock);
+    pthread_cond_destroy(&b.barrier);
+    pthread_mutex_destroy(&b.lock);
 }
 
-int ecm_barrier_wait(iit::ecat::ecm_barrier_t *b)
+int ecm_barrier_wait(iit::ecat::ecm_barrier_t &b)
 {
     int ret = 0;
     
-    pthread_mutex_lock(&b->lock);
-    while (!b->signaled) {
-        ret = pthread_cond_wait(&b->barrier, &b->lock);
+    pthread_mutex_lock(&b.lock);
+    while (!b.signaled) {
+        ret = pthread_cond_wait(&b.barrier, &b.lock);
         if (ret)
             break;
     }
-    b->signaled = 0;
-    pthread_mutex_unlock(&b->lock);
+    b.signaled = 0;
+    pthread_mutex_unlock(&b.lock);
     return ret;
 }
 
-int ecm_barrier_timedwait(iit::ecat::ecm_barrier_t *b, struct timespec *ts)
+int ecm_barrier_timedwait(iit::ecat::ecm_barrier_t &b, struct timespec &ts)
 {
     int ret = 0;
     
-    pthread_mutex_lock(&b->lock);
-    while (!b->signaled) {
-        ret = pthread_cond_timedwait(&b->barrier, &b->lock, ts);
+    pthread_mutex_lock(&b.lock);
+    while (!b.signaled) {
+        ret = pthread_cond_timedwait(&b.barrier, &b.lock, &ts);
         if (ret)
             break;
     }
-    b->signaled = 0;
-    pthread_mutex_unlock(&b->lock);
+    b.signaled = 0;
+    pthread_mutex_unlock(&b.lock);
     return ret;
 }
 
-void ecm_barrier_release(iit::ecat::ecm_barrier_t *b)
+void ecm_barrier_release(iit::ecat::ecm_barrier_t &b)
 {
-    pthread_mutex_lock(&b->lock);
-    b->signaled = 1;
-    pthread_cond_broadcast(&b->barrier);
-    //pthread_cond_signal(&b->barrier);
-    pthread_mutex_unlock(&b->lock);
+    pthread_mutex_lock(&b.lock);
+    b.signaled = 1;
+    pthread_cond_broadcast(&b.barrier);
+    //pthread_cond_signal(&b.barrier);
+    pthread_mutex_unlock(&b.lock);
 }
 
 
 
 /* PI calculation to get linux rx thread synced to DC time */
-static int64_t ec_sync(const int64_t reftime, const uint64_t cycletime , int64_t* offsettime)
+static int64_t ec_sync(const int64_t reftime,
+                       const uint64_t cycletime ,
+                       const uint64_t sync_point_ns,
+                       int64_t *offsettime)
 {
     /* master sync offset with ec_DCtime */
-    static const uint32_t sync_point_ns = 600000; //500000; //300000;  
     static int64_t integral = 0;
     int64_t delta;
 
@@ -147,19 +150,19 @@ int iit::ecat::ecat_cycle(void) {
 }
 
 /* RT EtherCAT thread */
-void * ecat_thread( void* cycle_ns )
+void * ecat_thread( void * _arg )
 {
     struct timespec   ts, tleft;
-    struct timeval    tp;
     int rc;
     int ht;
     int wkc;
-    uint64_t    cycle_time_ns;
     uint64_t    t_prec, t_now;
     uint64_t    ec_cycle_ns, ec_now;
     int64_t     toff;
     uint64_t    delta;
 
+    iit::ecat::ec_thread_arg_t * ptr_ec_th_arg = (iit::ecat::ec_thread_arg_t*)_arg;
+    
 #ifdef __COBALT__
     pthread_setname_np(pthread_self(), "ecat");
     pthread_setmode_np(0, PTHREAD_WARNSW, 0);
@@ -170,17 +173,16 @@ void * ecat_thread( void* cycle_ns )
     rc = clock_gettime(CLOCK_REALTIME, &ts);
     ht = (ts.tv_nsec / 1000000) + 1; /* round to nearest ms */
     ts.tv_nsec = ht * 1000000;
-    cycle_time_ns = (uint64_t)(cycle_ns); /* cycletime in ns */
     //DPRINTF("%llu \n", cycle_time_ns);
     toff = 0;
-    pthread_mutex_lock(&ecat_mutex);
-    ec_send_processdata();
-    pthread_mutex_unlock(&ecat_mutex);
+//     pthread_mutex_lock(&ecat_mutex);
+//     ec_send_processdata();
+//     pthread_mutex_unlock(&ecat_mutex);
     
     while ( ecat_thread_run ) {
         
         /* calculate next cycle start */
-        iit::ecat::add_timespec(&ts, cycle_time_ns + toff);
+        iit::ecat::add_timespec(&ts, ptr_ec_th_arg->ecat_cycle_ns + toff);
         /* wait to cycle start */
         rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &ts, NULL);
 
@@ -192,9 +194,12 @@ void * ecat_thread( void* cycle_ns )
         pthread_mutex_unlock(&ecat_mutex);
 
 
-        if ( ec_slave[0].hasdc && cycle_time_ns != 0 ) {
+        if ( ec_slave[0].hasdc && ptr_ec_th_arg->ecat_cycle_ns != 0 ) {
             /* calulate toff to get linux time and DC synced */
-            delta = ec_sync(ec_DCtime, cycle_time_ns, &toff);
+            delta = ec_sync(ec_DCtime,
+                            ptr_ec_th_arg->ecat_cycle_ns,
+                            ptr_ec_th_arg->sync_point_ns,
+                            &toff);
         } else {
             toff = 250000;
         }
@@ -205,13 +210,13 @@ void * ecat_thread( void* cycle_ns )
         ec_timing.offset = toff;
         ec_timing.loop_time = t_now - t_prec;
         ec_timing.ecat_rx_wkc = wkc;
-        ec_timing.ecat_cycle_time = ec_cycle_ns;
         ec_timing.delta = delta;
+        ec_timing.ts = ts;
         
         t_prec = t_now;
         
         if ( wkc > 0 ) {
-            ecm_barrier_release(&ecm_barrier);
+            ecm_barrier_release(ecm_barrier);
         } else {
             DPRINTF("wkc %d\n", wkc);
         }
@@ -224,7 +229,7 @@ void * ecat_thread( void* cycle_ns )
 }
 
 
-static void start_ecat_thread(const uint32_t cycle_time_ns) {
+static void start_ecat_thread(const iit::ecat::ec_thread_arg_t &ec_thread_arg) {
 
     int                 ret;
     pthread_attr_t      attr;
@@ -250,9 +255,9 @@ static void start_ecat_thread(const uint32_t cycle_time_ns) {
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     pthread_attr_setaffinity_np(&attr, sizeof(cpu_set), &cpu_set);
 
-    DPRINTF("[ECat_master] Start ecat_thread %llu ns\n", cycle_time_ns);
+    DPRINTF("[ECat_master] Start ecat_thread %lld ns\n", ec_thread_arg.ecat_cycle_ns);
     ecat_thread_run = 1;
-    ret = pthread_create(&ecat_thread_id, &attr, ecat_thread, (void*)cycle_time_ns);
+    ret = pthread_create(&ecat_thread_id, &attr, ecat_thread, (void*)&ec_thread_arg);
 
     pthread_attr_destroy ( &attr );
     
@@ -338,7 +343,7 @@ int iit::ecat::req_state_check(uint16 slave, uint16_t req_state) {
 int iit::ecat::initialize(const char* ifname, bool reset_micro)
 {
 
-    ecm_barrier_init(&ecm_barrier);
+    ecm_barrier_init(ecm_barrier);
     ec_reset_micro_slaves(reset_micro);
     
     DPRINTF("[ECat_master] Using %s\n", ifname);
@@ -366,26 +371,23 @@ int iit::ecat::initialize(const char* ifname, bool reset_micro)
  * 
  * @author amargan (3/31/2014)
  * 
- * @param ecat_cycle_ns 
- * @param ecat_cycle_shift_ns 
- * 
  * @return int expectedWKC
  */
-int iit::ecat::operational(const uint32_t ecat_cycle_ns, 
-                           const uint32_t ecat_cycle_shift_ns)
+int iit::ecat::operational(const ec_thread_arg_t &ec_thread_arg) 
 {
     struct timespec sleep_time;
 
     if ( ! ec_configdc() ) {
         DPRINTF("[ECat_master] Failed to config DC\n");
+        return 0;
     }
-
+    
     // Configure DC if ...
-    if ( ecat_cycle_ns > 0 ) {
+    if ( ec_thread_arg.ecat_cycle_ns > 0 ) {
         DPRINTF("[ECat_master] Configure DC\n");
         // Configure the distributed clocks for each slave.
         for ( int i = 1; i <= ec_slavecount; i++ ) {
-            ec_dcsync0(i, true, ecat_cycle_ns, ecat_cycle_shift_ns);
+            ec_dcsync0(i, true, ec_thread_arg.ecat_cycle_ns, ec_thread_arg.ecat_cycle_shift_ns);
         }
     }
 
@@ -398,11 +400,11 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
     // some slaves needs receive pdos before going to OP
     //
     sleep_time = { 0, 50000}; // 50 us
-    if ( ecat_cycle_ns > 0 ) {
+    if ( ec_thread_arg.ecat_cycle_ns > 0 ) {
         // Update ec_DCtime so we can calculate stop time below.
         ecat_cycle();
         // Send a barrage of packets to set up the DC clock.
-        int64_t stoptime = ec_DCtime + ecat_cycle_shift_ns;
+        int64_t stoptime = ec_DCtime + ec_thread_arg.ecat_cycle_shift_ns;
         //int64_t stoptime = 3e9L;
         // SOEM automatically updates ec_DCtime.
         DPRINTF("[ECat_master] warm up .. run ecat_cycle for %.2f secs\n", (float)(stoptime/1e9L) );
@@ -439,12 +441,22 @@ int iit::ecat::operational(const uint32_t ecat_cycle_ns,
     DPRINTF("[ECat_master] o: %d   i: %d\n", ec_slave[0].Obytes, ec_slave[0].Ibytes);
 
     // start thread, setting distribuited clock DC0 to ecat_cycle_ns
-    start_ecat_thread(ecat_cycle_ns);
-
+    start_ecat_thread(ec_thread_arg);
 
     return expectedWKC;
 
 }
+
+int iit::ecat::operational(const uint32_t ecat_cycle_ns, 
+                           const uint32_t ecat_cycle_shift_ns)
+{
+    gl_ec_thread_arg.ecat_cycle_ns = ecat_cycle_ns;
+    gl_ec_thread_arg.ecat_cycle_shift_ns = ecat_cycle_shift_ns;
+    gl_ec_thread_arg.sync_point_ns = 600000;
+    
+    operational(gl_ec_thread_arg);
+}
+
 
 int iit::ecat::pre_operational(void) {
 
@@ -481,7 +493,7 @@ void iit::ecat::finalize(bool do_power_off) {
     
     ec_close();
     DPRINTF("[ECat_master] close\n");
-    ecm_barrier_destroy(&ecm_barrier);
+    ecm_barrier_destroy(ecm_barrier);
     pthread_mutex_destroy(&ecat_mutex);
 }
 
@@ -507,7 +519,7 @@ int iit::ecat::recv_from_slaves(ec_timing_t &timing) {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     add_timespec(&ts,250000000);
-    ret = ecm_barrier_timedwait(&ecm_barrier, &ts);
+    ret = ecm_barrier_timedwait(ecm_barrier, ts);
 
     // ret != 0 on error ... ETIMEDOUT == 110
     if ( ret != 0 ) {

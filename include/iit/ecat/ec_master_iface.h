@@ -45,12 +45,20 @@ struct __ec_timing {
     int64_t     offset;       ///< sleep time of the master until next "DC tick"
     uint64_t    loop_time;    ///< actual measure of the DC period
     int32_t     ecat_rx_wkc;
-    uint64_t    ecat_cycle_time;
     int64_t     delta;
+    struct timespec   ts;
 };
+
+struct __ec_thread_arg {
+    uint64_t    ecat_cycle_ns;
+    uint64_t    ecat_cycle_shift_ns;
+    uint64_t    sync_point_ns;
+};
+
 
 typedef struct __ecm_barrier ecm_barrier_t;
 typedef struct __ec_timing ec_timing_t;
+typedef struct __ec_thread_arg ec_thread_arg_t;
 typedef std::shared_ptr<EscWrapper>  ESCPtr;
 typedef std::map<int, ESCPtr>  SlavesMap;
 
@@ -58,8 +66,9 @@ typedef std::map<int, ESCPtr>  SlavesMap;
 /**
  *
  * \param ifname
+ * \param reset_micro
  *
- * \return int ec_slavexount
+ * \return int ec_slavecount
  */
 int initialize(const char* ifname, bool reset_micro);
 /**
@@ -69,9 +78,10 @@ int initialize(const char* ifname, bool reset_micro);
  *
  * \return int expectedWKC
  */
-int operational(
-        const uint32_t ecat_cycle_ns,
-        const uint32_t ecat_cycle_shift_ns);
+int operational( const uint32_t ecat_cycle_ns, 
+                 const uint32_t ecat_cycle_shift_ns);
+
+int operational( const ec_thread_arg_t &ec_thread_arg);
 
 /**
  *
@@ -95,7 +105,8 @@ int recv_from_slaves(ec_timing_t &);
 int send_to_slaves(bool write_slaves_pdo=true);
 
 int send_file(uint16_t slave, std::string filename, uint32_t passwd_firm);
-int recv_file(uint16_t slave, std::string filename, uint32_t passwd_firm, uint32_t byte_count, std::string save_as);
+int recv_file(uint16_t slave, std::string filename, uint32_t passwd_firm,
+              uint32_t byte_count, std::string save_as);
  
 void power_off(void);
 
